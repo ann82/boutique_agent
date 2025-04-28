@@ -24,15 +24,27 @@ class VisionAgent:
             
             # Prepare the prompt
             prompt = f"""
-            Analyze this fashion image and provide a detailed description in JSON format with the following structure:
+            Analyze the provided fashion image and generate a detailed product understanding.
+
+            Focus mainly on the clothing — style, materials, patterns, cuts — and not on the person.
+            Accessories (like jewelry, belts, bags, shoes) should be noted under key_features if visible, as optional add-ons.
+
+            Use rich, boutique-style language (sensory, elegant but concise) in field values, targeting a boutique in rural South India that offers both Indian and Western designs.
+
+            If a detail is unclear, use "unknown" or leave the array empty.
+
+            Infer suitable occasion and season from the outfit's style and materials.
+
+            Return this JSON:
+
             {{
-                "style": "string describing the overall style",
-                "colors": ["array of main colors"],
-                "materials": ["array of materials"],
-                "occasion": "suitable occasion",
-                "season": "appropriate season",
-                "key_features": ["array of notable features"],
-                "brand_style": "description of brand aesthetic if visible"
+              "style": "overall clothing style (traditional Indian, Indo-western fusion, modern western, etc.)",
+              "colors": ["main visible colors"],
+              "materials": ["materials with adjectives if visible"],
+              "occasion": "best suited occasion (e.g., casual, festive, formal)",
+              "season": "appropriate season (e.g., summer, festive season, winter)",
+              "key_features": ["notable features and visible accessories"],
+              "brand_style": "brand aesthetic description (e.g., earthy, regal, minimalist)"
             }}
             """
             

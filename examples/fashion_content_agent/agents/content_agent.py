@@ -20,14 +20,17 @@ class ContentAgent:
             
             # Prepare the prompt
             prompt = f"""
-            Generate marketing content for this fashion image in JSON format with the following structure:
+            Using the extracted details, generate marketing content to promote the item online and in the boutique.
+
+            Return this JSON:
+
             {{
-                "title": "catchy title for the fashion item",
-                "description": "detailed product description",
-                "caption": "engaging social media caption",
-                "hashtags": ["array of relevant hashtags"],
-                "alt_text": "accessible image description",
-                "platform": "suggested social media platform"
+              "title": "catchy, boutique-style title for the product",
+              "description": "elegant 3–5 sentence product description highlighting style, material, key features, and brand feel",
+              "caption": "engaging social media caption (emojis welcome but optional)",
+              "hashtags": ["array of relevant and trendy fashion hashtags"],
+              "alt_text": "accessible image description focused on clothing and accessories",
+              "platform": "suggested best-fit platform (e.g., Instagram, Facebook, Pinterest)"
             }}
             """
             

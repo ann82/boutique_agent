@@ -32,8 +32,17 @@ async def test_create_spreadsheet_headers(storage, mock_services):
     args, kwargs = mock_sheets.spreadsheets().values().update.call_args
     headers = kwargs['body']['values'][0]
     assert headers == [
-        'Title', 'Description', 'Caption', 'Hashtags', 'Alt Text', 'Platform', 'Image URL', 'Vision Analysis'
+        'Title', 'Description', 'Caption', 'Hashtags', 'Alt Text', 'Platform', 'Image URL', 'Key Features', 'Vision Analysis'
     ]
+    
+    # Check that header formatting was applied
+    args, kwargs = mock_sheets.spreadsheets().batchUpdate.call_args
+    format_request = kwargs['body']['requests'][0]['repeatCell']
+    assert format_request['range']['endColumnIndex'] == len(headers)
+    assert format_request['cell']['userEnteredFormat']['backgroundColor'] == {'red': 0.2, 'green': 0.2, 'blue': 0.2}
+    assert format_request['cell']['userEnteredFormat']['horizontalAlignment'] == 'CENTER'
+    assert format_request['cell']['userEnteredFormat']['textFormat']['bold'] == True
+    assert format_request['cell']['userEnteredFormat']['textFormat']['fontSize'] == 12
 
 @pytest.mark.asyncio
 async def test_save_content_minimal_fields(storage, mock_services):
@@ -51,7 +60,10 @@ async def test_save_content_minimal_fields(storage, mock_services):
         'platform': 'Instagram',
         'image_url': 'http://img'
     }
-    vision_analysis = {'test': 'data'}
+    vision_analysis = {
+        'test': 'data',
+        'key_features': ['feature1', 'feature2']
+    }
     
     sheet_url = await storage.save(content, vision_analysis, sheet_name='Test Sheet')
     assert 'sheet123' in sheet_url
@@ -61,6 +73,7 @@ async def test_save_content_minimal_fields(storage, mock_services):
     row = kwargs['body']['values'][0]
     assert row[0] == 'Test Title'
     assert row[3] == '#tag'
+    assert row[7] == 'feature1, feature2'  # Check key features
 
 @pytest.mark.asyncio
 async def test_save_content_missing_fields(storage, mock_services):
@@ -72,7 +85,10 @@ async def test_save_content_missing_fields(storage, mock_services):
         'title': 'Test Title',
         'platform': 'Instagram'
     }
-    vision_analysis = {'test': 'data'}
+    vision_analysis = {
+        'test': 'data',
+        'key_features': []
+    }
     
     sheet_url = await storage.save(content, vision_analysis, sheet_name='Test Sheet')
     assert 'sheet123' in sheet_url
@@ -82,7 +98,8 @@ async def test_save_content_missing_fields(storage, mock_services):
     row = kwargs['body']['values'][0]
     assert row[0] == 'Test Title'
     assert row[5] == 'Instagram'
-    assert all(cell == '' for i, cell in enumerate(row) if i not in [0, 5, 7])
+    assert row[7] == ''  # Empty key features
+    assert all(cell == '' for i, cell in enumerate(row) if i not in [0, 5, 7, 8])
 
 @pytest.mark.asyncio
 async def test_save_content_extra_fields(storage, mock_services):
@@ -100,7 +117,10 @@ async def test_save_content_extra_fields(storage, mock_services):
         'image_url': 'http://img',
         'extra_field': 'should be ignored'
     }
-    vision_analysis = {'test': 'data'}
+    vision_analysis = {
+        'test': 'data',
+        'key_features': ['feature1']
+    }
     
     sheet_url = await storage.save(content, vision_analysis, sheet_name='Test Sheet')
     assert 'sheet123' in sheet_url
@@ -108,7 +128,7 @@ async def test_save_content_extra_fields(storage, mock_services):
     # Check that extra fields are not written
     args, kwargs = mock_sheets.spreadsheets().values().append.call_args
     row = kwargs['body']['values'][0]
-    assert len(row) == 8
+    assert len(row) == 9  # Now includes key features column
 
 @pytest.mark.asyncio
 async def test_save_content_empty(storage, mock_services):
@@ -125,8 +145,9 @@ async def test_save_content_empty(storage, mock_services):
     # Check that all fields are empty
     args, kwargs = mock_sheets.spreadsheets().values().append.call_args
     row = kwargs['body']['values'][0]
-    assert all(cell == '' for i, cell in enumerate(row) if i != 7)
-    assert row[7] == '{}'
+    assert all(cell == '' for i, cell in enumerate(row) if i not in [7, 8])  # Skip key features and vision analysis columns
+    assert row[7] == ''  # Empty key features
+    assert row[8] == '{}'  # Empty vision analysis as JSON
 
 @pytest.mark.asyncio
 async def test_sheet_reuse(storage, mock_services):
@@ -160,7 +181,7 @@ async def test_sheet_creation_with_headers(storage, mock_services):
     mock_sheets.spreadsheets().values().append().execute.return_value = {}
     
     content = {'title': 'Test'}
-    vision_analysis = {'test': 'data'}
+    vision_analysis = {'test': 'data', 'key_features': []}
     
     # Save should create new sheet with headers
     sheet_url = await storage.save(content, vision_analysis, sheet_name='New Sheet')
@@ -168,8 +189,8 @@ async def test_sheet_creation_with_headers(storage, mock_services):
     
     # Verify headers were written
     args, kwargs = mock_sheets.spreadsheets().values().update.call_args
-    assert kwargs['range'] == 'Sheet1!A1:H1'
-    assert len(kwargs['body']['values'][0]) == 8
+    assert kwargs['range'] == 'Sheet1!A1:I1'  # Updated range to include key features
+    assert len(kwargs['body']['values'][0]) == 9  # Now includes key features column
 
 @pytest.mark.asyncio
 async def test_sheet_sharing(storage, mock_services):
@@ -204,7 +225,7 @@ async def test_sheet_error_handling(storage, mock_services):
     mock_drive.files().list().execute.side_effect = None
     mock_drive.files().list().execute.return_value = {'files': []}
     mock_sheets.spreadsheets().create().execute.side_effect = Exception('Sheets API error')
-    with pytest.raises(Exception, match='Error creating spreadsheet'):
+    with pytest.raises(Exception, match='Error saving to Google Sheets'):
         await storage.save({}, {}, sheet_name='Test Sheet')
 
 @pytest.mark.asyncio
@@ -232,4 +253,87 @@ async def test_concurrent_sheet_access(storage, mock_services):
     assert all('existing123' in url for url in results)
     
     # Verify we only searched for the sheet once
-    assert mock_drive.files().list().execute.call_count == 1 
+    assert mock_drive.files().list().execute.call_count == 1
+
+@pytest.mark.asyncio
+async def test_duplicate_url_handling(storage, mock_services):
+    mock_sheets, mock_drive = mock_services
+    
+    # Mock existing spreadsheet
+    mock_drive.files().list().execute.return_value = {'files': [{'id': 'test123'}]}
+    
+    # Mock existing URLs in the sheet
+    mock_sheets.spreadsheets().values().get().execute.return_value = {
+        'values': [
+            ['Image URL'],  # Header
+            ['https://example.com/image1.jpg'],
+            ['https://example.com/image2.jpg']
+        ]
+    }
+    
+    # Test with a new URL
+    content = {'image_url': 'https://example.com/image3.jpg'}
+    vision_analysis = {'test': 'data'}
+    sheet_url = await storage.save(content, vision_analysis)
+    
+    # Verify new URL was saved
+    assert mock_sheets.spreadsheets().values().append.called
+    
+    # Test with a duplicate URL
+    content = {'image_url': 'https://example.com/image1.jpg'}
+    sheet_url = await storage.save(content, vision_analysis)
+    
+    # Verify no new append was made for duplicate URL
+    assert mock_sheets.spreadsheets().values().append.call_count == 1
+
+@pytest.mark.asyncio
+async def test_duplicate_url_empty_sheet(storage, mock_services):
+    mock_sheets, mock_drive = mock_services
+    
+    # Mock empty spreadsheet
+    mock_drive.files().list().execute.return_value = {'files': [{'id': 'test123'}]}
+    mock_sheets.spreadsheets().values().get().execute.return_value = {
+        'values': [['Image URL']]  # Only header
+    }
+    
+    # Test with a new URL
+    content = {'image_url': 'https://example.com/image1.jpg'}
+    vision_analysis = {'test': 'data'}
+    sheet_url = await storage.save(content, vision_analysis)
+    
+    # Verify URL was saved
+    assert mock_sheets.spreadsheets().values().append.called
+
+@pytest.mark.asyncio
+async def test_duplicate_url_no_image_url(storage, mock_services):
+    mock_sheets, mock_drive = mock_services
+    
+    # Mock existing spreadsheet
+    mock_drive.files().list().execute.return_value = {'files': [{'id': 'test123'}]}
+    
+    # Test with content without image_url
+    content = {'title': 'Test'}
+    vision_analysis = {'test': 'data'}
+    sheet_url = await storage.save(content, vision_analysis)
+    
+    # Verify save was attempted (no duplicate check needed)
+    assert mock_sheets.spreadsheets().values().append.called
+
+@pytest.mark.asyncio
+async def test_duplicate_url_error_handling(storage, mock_services):
+    mock_sheets, mock_drive = mock_services
+    
+    # Mock existing spreadsheet
+    mock_drive.files().list().execute.return_value = {'files': [{'id': 'test123'}]}
+    
+    # Mock error when checking URLs
+    mock_sheets.spreadsheets.return_value.values.return_value.get.side_effect = Exception("Failed to get values")
+    
+    # Mock Streamlit context
+    with patch('utils.document_storage.st') as mock_st:
+        # Test error handling
+        content = {'image_url': 'https://example.com/image1.jpg'}
+        vision_analysis = {'test': 'data'}
+        
+        with pytest.raises(Exception, match="Error checking for duplicate URLs"):
+            await storage.save(content, vision_analysis) 

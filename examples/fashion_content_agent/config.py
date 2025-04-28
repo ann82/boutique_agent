@@ -38,6 +38,7 @@ class Config:
     
     # Cache Settings
     CACHE_ENABLED = os.getenv("CACHE_ENABLED", "true").lower() == "true"
+    CACHE_DIR = os.getenv("CACHE_DIR", ".cache")
     CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))  # 1 hour
     CACHE_MAX_SIZE = int(os.getenv("CACHE_MAX_SIZE", "1000"))
 

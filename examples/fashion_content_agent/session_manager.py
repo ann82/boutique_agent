@@ -27,7 +27,7 @@ class SessionManager:
         self.content_agent = None
         self.session = None
         
-    def init_session(self):
+    async def init_session(self):
         """Initialize the session."""
         try:
             # Initialize API client with connection pooling
@@ -47,7 +47,7 @@ class SessionManager:
             
             # Initialize cache
             self.cache = CacheManager(
-                cache_dir=".cache",
+                cache_dir=Config.CACHE_DIR,
                 max_size_mb=Config.CACHE_MAX_SIZE,
                 expiration_hours=Config.CACHE_TTL // 3600  # Convert seconds to hours
             )
@@ -114,9 +114,9 @@ class SessionManager:
 # Global session manager
 session_manager = SessionManager()
 
-def init_session():
+async def init_session():
     """Initialize the session."""
-    return session_manager.init_session()
+    return await session_manager.init_session()
 
 def get_session():
     """Get the current session."""

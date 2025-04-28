@@ -3,15 +3,15 @@ Main application module for the Fashion Content Agent.
 """
 import os
 import json
-import streamlit as st
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from utils.image_utils import is_valid_image_url
 from utils.validation import validate_content_format
 from session_manager import get_session, init_session, cleanup
 import asyncio
 
 # Initialize session
-init_session()
+async def init():
+    await init_session()
 
 class FashionContentAgent:
     """Main agent class for fashion content generation."""
@@ -24,7 +24,7 @@ class FashionContentAgent:
         self.storage = session["storage"]
         
     async def process_image(self, image_url: str, sheet_name: Optional[str] = None) -> Dict[str, Any]:
-        """Process an image URL and generate content."""
+        """Process a single image URL and generate content."""
         try:
             # Validate image URL
             if not is_valid_image_url(image_url):
@@ -53,6 +53,63 @@ class FashionContentAgent:
             
         except Exception as e:
             raise Exception(f"Error processing image: {str(e)}")
+    
+    async def process_images(self, image_urls: List[str], sheet_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Process multiple image URLs and generate content in batch."""
+        try:
+            # Validate number of images
+            if len(image_urls) > 3:
+                raise ValueError("Maximum 3 images can be processed at a time")
+            
+            # Check for duplicate URLs
+            unique_urls = list(set(image_urls))
+            if len(unique_urls) < len(image_urls):
+                raise ValueError("Duplicate image URLs are not allowed")
+            
+            # Process images concurrently
+            tasks = []
+            for url in unique_urls:
+                # Validate image URL
+                if not is_valid_image_url(url):
+                    raise ValueError(f"Invalid image URL: {url}")
+                
+                # Get vision analysis
+                vision_task = self.vision_agent.analyze_image(url)
+                tasks.append(vision_task)
+            
+            # Get all vision analyses
+            vision_analyses = await asyncio.gather(*tasks)
+            
+            # Generate content for all images
+            content_tasks = []
+            for url in unique_urls:
+                content_task = self.content_agent.generate_content(url)
+                content_tasks.append(content_task)
+            
+            # Get all content
+            contents = await asyncio.gather(*content_tasks)
+            
+            # Add image URLs to content
+            for content, url in zip(contents, unique_urls):
+                content["image_url"] = url
+                validate_content_format(content)
+            
+            # Save all content in a single batch
+            sheet_url = await self.storage.save_batch(contents, vision_analyses, sheet_name)
+            
+            # Prepare results
+            results = []
+            for content, vision_analysis in zip(contents, vision_analyses):
+                results.append({
+                    "content": content,
+                    "vision_analysis": vision_analysis,
+                    "sheet_url": sheet_url
+                })
+            
+            return results
+            
+        except Exception as e:
+            raise Exception(f"Error processing images: {str(e)}")
             
     async def close(self) -> None:
         """Close all resources."""
@@ -70,51 +127,5 @@ def extract_json(text: str) -> Dict[str, Any]:
     except Exception as e:
         raise ValueError(f"Error extracting JSON: {str(e)}")
 
-# Streamlit UI
-st.set_page_config(
-    page_title="Fashion Content Agent",
-    page_icon="👗",
-    layout="wide"
-)
-
-st.title("Fashion Content Agent")
-st.markdown("Generate marketing content for fashion images using AI")
-
-# Initialize agent
-agent = FashionContentAgent()
-
-# Image URL input
-image_url = st.text_input("Enter image URL", placeholder="https://example.com/image.jpg")
-
-# Sheet selection
-sheet_name = st.text_input("Enter sheet name (optional)", placeholder="My Fashion Content")
-
-# Process button
-if st.button("Generate Content"):
-    if not image_url:
-        st.error("Please enter an image URL")
-    else:
-        try:
-            with st.spinner("Processing image..."):
-                result = asyncio.run(agent.process_image(image_url, sheet_name))
-                
-                # Display results
-                st.success("Content generated successfully!")
-                
-                # Display content
-                st.subheader("Generated Content")
-                st.json(result["content"])
-                
-                # Display vision analysis
-                st.subheader("Vision Analysis")
-                st.json(result["vision_analysis"])
-                
-                # Display sheet URL
-                st.subheader("Google Sheet")
-                st.markdown(f"[View Sheet]({result['sheet_url']})")
-                
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
-
-# Cleanup on exit
-cleanup()
+# Initialize the session
+asyncio.run(init())

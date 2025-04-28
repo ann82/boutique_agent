@@ -3,22 +3,22 @@ Streamlit application for the Fashion Content Agent.
 """
 import streamlit as st
 import asyncio
-from typing import Dict, Any, Optional
-from main import FashionContentAgent, extract_json
+from typing import Dict, Any, Optional, List
+from main import FashionContentAgent, extract_json, init
 from utils.image_utils import is_valid_image_url
 from utils.validation import validate_content_format
 from config import Config
-from session_manager import init_session, cleanup
+from session_manager import cleanup
 
-# Initialize session
-init_session()
-
-# Set page config
+# Set page config - MUST be first Streamlit command
 st.set_page_config(
     page_title="Fashion Content Agent",
     page_icon="👗",
     layout="wide"
 )
+
+# Initialize session
+asyncio.run(init())
 
 # Initialize agent
 agent = FashionContentAgent()
@@ -27,7 +27,7 @@ agent = FashionContentAgent()
 st.title("Fashion Content Agent")
 st.markdown("""
     Generate marketing content for fashion images using AI.
-    Upload an image or provide a URL to get started.
+    Upload up to 3 images at a time to get started.
 """)
 
 # Sidebar for sheet selection
@@ -36,36 +36,62 @@ sheet_name = st.sidebar.text_input("Sheet Name", "Fashion Content")
 
 # Main content area
 st.header("Image Input")
-image_url = st.text_input("Image URL", placeholder="Enter image URL or Google Drive link")
+st.markdown("Enter up to 3 image URLs (one per line):")
+
+# Create a text area for multiple image URLs
+image_urls_input = st.text_area(
+    "Image URLs",
+    placeholder="Enter image URLs (one per line)\nExample:\nhttps://example.com/image1.jpg\nhttps://example.com/image2.jpg",
+    height=150
+)
 
 if st.button("Generate Content"):
-    if not image_url:
-        st.error("Please enter an image URL")
+    if not image_urls_input:
+        st.error("Please enter at least one image URL")
     else:
         try:
-            # Validate image URL
-            if not is_valid_image_url(image_url):
-                st.error("Invalid image URL")
+            # Split input into lines and clean up
+            image_urls = [url.strip() for url in image_urls_input.split('\n') if url.strip()]
+            
+            # Validate number of images
+            if len(image_urls) > 3:
+                st.error("Please enter a maximum of 3 image URLs")
             else:
-                # Process image
-                with st.spinner("Generating content..."):
-                    result = asyncio.run(agent.process_image(image_url))
-                    
-                    # Display results
-                    st.success("Content generated successfully!")
-                    
-                    # Show content
-                    st.subheader("Generated Content")
-                    st.json(result["content"])
-                    
-                    # Show vision analysis
-                    st.subheader("Vision Analysis")
-                    st.json(result["vision_analysis"])
-                    
-                    # Show sheet URL
-                    st.subheader("Google Sheet")
-                    st.markdown(f"[Open Sheet]({result['sheet_url']})")
-                    
+                # Check for duplicate URLs
+                unique_urls = list(set(image_urls))
+                if len(unique_urls) < len(image_urls):
+                    st.error("Duplicate image URLs are not allowed. Please remove duplicates.")
+                else:
+                    # Validate each URL
+                    invalid_urls = [url for url in image_urls if not is_valid_image_url(url)]
+                    if invalid_urls:
+                        st.error(f"Invalid image URLs: {', '.join(invalid_urls)}")
+                    else:
+                        # Process images
+                        with st.spinner("Generating content..."):
+                            results = asyncio.run(agent.process_images(image_urls, sheet_name))
+                            
+                            # Display results
+                            st.success(f"Successfully processed {len(results)} images!")
+                            
+                            # Show results for each image
+                            for i, result in enumerate(results, 1):
+                                st.subheader(f"Image {i}")
+                                
+                                # Show content
+                                st.markdown("**Generated Content**")
+                                st.json(result["content"])
+                                
+                                # Show vision analysis
+                                st.markdown("**Vision Analysis**")
+                                st.json(result["vision_analysis"])
+                                
+                                st.markdown("---")
+                            
+                            # Show sheet URL
+                            st.subheader("Google Sheet")
+                            st.markdown(f"[Open Sheet]({results[0]['sheet_url']})")
+                        
         except Exception as e:
             st.error(f"Error: {str(e)}")
 

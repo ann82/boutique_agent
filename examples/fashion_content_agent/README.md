@@ -31,6 +31,7 @@ graph TD
 - **Optimized JSON Parsing**: Improved JSON extraction and validation
 - **Batch Processing**: Google Sheets operations now support batch processing
 - **Rate Limiting**: Enhanced async rate limiting with proper concurrency control
+- **Duplicate Prevention**: Automatic checking and skipping of duplicate image URLs
 
 ### Memory Optimization
 - **Resource Management**: Proper cleanup of resources and connections
@@ -83,7 +84,9 @@ graph TD
 - **Optimized Performance**: Latest optimizations for faster processing and better resource usage
 - **Smart Sheet Management**: Reuses existing sheets instead of creating new ones for the same name
 - **Sheet Caching**: Efficient caching of spreadsheet IDs for faster access
-- **Automatic Headers**: New sheets are created with proper column headers
+- **Automatic Headers**: New sheets are created with proper column headers and formatting
+- **Key Features Column**: Separate column for storing notable features and accessories
+- **Duplicate Prevention**: Automatically checks and skips duplicate image URLs to prevent redundant entries
 
 ## Sheet Columns
 
@@ -96,7 +99,15 @@ Newly created Google Sheets will have the following columns (with the first char
 - Alt Text
 - Platform
 - Image URL
+- Key Features
 - Vision Analysis
+
+The headers are formatted with:
+- Dark gray background
+- White text
+- Bold font
+- Centered alignment
+- Font size 12
 
 ## Performance Optimizations
 
@@ -184,6 +195,7 @@ Key configuration options in `config.py`:
 ### Other Common Issues
 - **API errors**: Check your API keys and credentials.
 - **Image not loading**: Make sure the image URL is public and direct (for Google Drive, use the direct download format).
+- **Duplicate entries**: The system automatically skips duplicate image URLs. If you need to process the same image again, use a different URL or contact support.
 
 ## Sheet Management
 - You can create as many sheets as you want, and switch between them at any time using the UI.
