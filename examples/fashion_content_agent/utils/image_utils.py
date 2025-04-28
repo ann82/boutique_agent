@@ -32,9 +32,7 @@ def convert_google_drive_url(url: str) -> str:
                 raise ValueError("Invalid Google Drive URL format")
             
             # Return direct download URL
-            direct_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-            print(f"Converted Google Drive URL to: {direct_url}")
-            return direct_url
+            return f"https://drive.google.com/uc?export=download&id={file_id}"
         return url
     except Exception as e:
         raise ValueError(f"Failed to convert Google Drive URL: {str(e)}")
@@ -51,10 +49,7 @@ def get_image_from_url(url: str) -> str:
     """
     try:
         # Convert Google Drive URL if necessary
-        original_url = url
         url = convert_google_drive_url(url)
-        print(f"Original URL: {original_url}")
-        print(f"Processing URL: {url}")
         
         # Add headers to mimic a browser request
         headers = {
@@ -66,9 +61,6 @@ def get_image_from_url(url: str) -> str:
         
         # Stream the response to handle large files
         with requests.get(url, headers=headers, allow_redirects=True, stream=True) as response:
-            print(f"Response status code: {response.status_code}")
-            print(f"Response headers: {response.headers}")
-            
             response.raise_for_status()
             
             # Check if the response is actually an image
@@ -103,28 +95,19 @@ def get_image_from_url(url: str) -> str:
                         
                         # Convert to base64
                         return base64.b64encode(buffer.getvalue()).decode('utf-8')
-            else:
-                # For smaller images, process directly
-                img_data = BytesIO(response.content)
-                with Image.open(img_data) as img:
-                    # Convert to RGB if necessary
-                    if img.mode in ('RGBA', 'P'):
-                        img = img.convert('RGB')
-                    
-                    # Calculate new size while maintaining aspect ratio
-                    max_size = (800, 800)
-                    img.thumbnail(max_size, Image.Resampling.LANCZOS)
-                    
-                    # Save compressed image to BytesIO
-                    buffer = BytesIO()
-                    img.save(buffer, format='JPEG', quality=85)
-                    buffer.seek(0)
-                    
-                    # Convert to base64
-                    return base64.b64encode(buffer.getvalue()).decode('utf-8')
-                    
+            
+            # For smaller images, read directly into memory
+            buffer = BytesIO()
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    buffer.write(chunk)
+            buffer.seek(0)
+            
+            # Convert to base64
+            return base64.b64encode(buffer.getvalue()).decode('utf-8')
+            
     except Exception as e:
-        raise ValueError(f"Failed to process image: {str(e)}")
+        raise ValueError(f"Failed to get image from URL: {str(e)}")
 
 def is_valid_image_url(url: str) -> bool:
     """
@@ -152,12 +135,9 @@ def is_valid_image_url(url: str) -> bool:
         response = requests.head(url, headers=headers, allow_redirects=True)
         response.raise_for_status()
         
-        # Check if the response is actually an image
+        # Check if content type is an image
         content_type = response.headers.get('content-type', '')
-        if not content_type.startswith('image/'):
-            return False
-            
-        return True
+        return content_type.startswith('image/')
         
     except Exception:
         return False
@@ -184,9 +164,7 @@ def convert_gdrive_url(url: str) -> str:
                 raise ValueError("Invalid Google Drive URL format")
             
             # Return direct download URL
-            direct_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-            print(f"Converted Google Drive URL to: {direct_url}")
-            return direct_url
+            return f"https://drive.google.com/uc?export=download&id={file_id}"
         return url
     except Exception as e:
         raise ValueError(f"Failed to convert Google Drive URL: {str(e)}")
@@ -199,7 +177,7 @@ def download_image(url: str) -> Optional[bytes]:
         url (str): URL of the image
         
     Returns:
-        Optional[bytes]: Image data if successful, None otherwise
+        Optional[bytes]: Image data as bytes if successful, None otherwise
     """
     try:
         # Convert Google Drive URL if necessary
@@ -213,17 +191,21 @@ def download_image(url: str) -> Optional[bytes]:
             'Referer': 'https://drive.google.com/'
         }
         
-        # Make the request
-        response = requests.get(url, headers=headers, allow_redirects=True)
-        response.raise_for_status()
-        
-        # Check if the response is actually an image
-        content_type = response.headers.get('content-type', '')
-        if not content_type.startswith('image/'):
-            raise ValueError(f"URL does not point to an image. Content type: {content_type}")
+        # Stream the response to handle large files
+        with requests.get(url, headers=headers, allow_redirects=True, stream=True) as response:
+            response.raise_for_status()
             
-        return response.content
-        
-    except Exception as e:
-        print(f"Failed to download image: {str(e)}")
+            # Check if the response is actually an image
+            content_type = response.headers.get('content-type', '')
+            if not content_type.startswith('image/'):
+                raise ValueError(f"URL does not point to an image. Content type: {content_type}")
+            
+            # Read the image data
+            buffer = BytesIO()
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    buffer.write(chunk)
+            return buffer.getvalue()
+            
+    except Exception:
         return None 

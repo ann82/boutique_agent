@@ -1,14 +1,14 @@
 # Fashion Content Agent
 
-An AI-powered system for analyzing fashion images and generating marketing content. The system uses GPT-4 Vision for image analysis and GPT-4 for content generation, with optimized API handling and async processing.
+An AI-powered system for analyzing fashion images and generating marketing content. The system uses GPT-4o for both image analysis and content generation, with optimized API handling and async processing.
 
 ## Architecture Diagram
 
 ```mermaid
 graph TD
     A[User (Streamlit Web UI)] -->|Image URL, Sheet Selection| B(FashionContentAgent)
-    B --> C[VisionAgent (GPT-4 Vision)]
-    B --> D[ContentAgent (GPT-4)]
+    B --> C[VisionAgent (GPT-4o)]
+    B --> D[ContentAgent (GPT-4o)]
     B --> E[GoogleSheetsStorage]
     E -->|Store/Read| F[(Google Sheets)]
     C -->|Vision Analysis| B
@@ -18,16 +18,32 @@ graph TD
 
 - **User** interacts with the Streamlit UI, providing an image URL and selecting/creating a Google Sheet.
 - **FashionContentAgent** orchestrates the workflow: calls the VisionAgent, then the ContentAgent, and manages storage.
-- **VisionAgent** uses GPT-4 Vision to analyze the image.
-- **ContentAgent** uses GPT-4 to generate marketing content based on the vision analysis.
+- **VisionAgent** uses GPT-4o to analyze the image.
+- **ContentAgent** uses GPT-4o to generate marketing content based on the vision analysis.
 - **GoogleSheetsStorage** saves results to the selected Google Sheet.
 
 ## Recent Optimizations
 
+### URL Handling Improvements
+- **Smart URL Normalization**: Automatically converts different Google Drive URL formats to a consistent direct download format
+- **Robust Duplicate Detection**: Compares normalized URLs to prevent duplicate entries regardless of URL format
+  - Early duplicate check before processing
+  - Clear user feedback for duplicate URLs
+  - Normalized comparison of both current and existing URLs
+  - Detailed debug logging for URL comparison process
+- **Google Drive Integration**: Handles various Google Drive URL formats:
+  - Sharing URLs (e.g., `drive.google.com/file/d/[ID]/view`)
+  - Direct download URLs (e.g., `drive.google.com/uc?export=download&id=[ID]`)
+- **URL Validation**: Enhanced validation for image URLs with proper error handling
+
 ### Testing Improvements
 - **Enhanced Test Coverage**: Improved test suite with proper mocking of external services
 - **URL Validation Mocking**: Added mocks for image URL validation to prevent actual HTTP requests during tests
-- **Duplicate URL Testing**: Comprehensive test cases for duplicate URL detection and handling
+- **Duplicate URL Testing**: Comprehensive test cases for duplicate URL detection and handling:
+  - Test for basic duplicate detection
+  - Test for duplicate in empty sheet
+  - Test for duplicate in non-existent sheet
+  - Test for error handling during duplicate check
 - **Error Scenario Coverage**: Added tests for various error scenarios and edge cases
 - **Async Test Support**: Proper async/await testing with pytest-asyncio
 
@@ -93,7 +109,11 @@ graph TD
 - **Sheet Caching**: Efficient caching of spreadsheet IDs for faster access
 - **Automatic Headers**: New sheets are created with proper column headers and formatting
 - **Key Features Column**: Separate column for storing notable features and accessories
-- **Duplicate Prevention**: Automatically checks and skips duplicate image URLs to prevent redundant entries
+- **Duplicate Prevention**: Automatically checks and skips duplicate image URLs to prevent redundant entries, with support for:
+  - Different URL formats (sharing vs. direct download)
+  - Google Drive URLs
+  - Case-insensitive matching
+  - Normalized URL comparison
 
 ## Sheet Columns
 
@@ -210,8 +230,8 @@ streamlit run main.py
 ## Configuration
 
 Key configuration options in `config.py`:
-- `VISION_MODEL`: GPT-4 Vision model name
-- `CONTENT_MODEL`: GPT-4 model name
+- `VISION_MODEL`: GPT-4o model name (default: "gpt-4o")
+- `CONTENT_MODEL`: GPT-4o model name (default: "gpt-4o")
 - `DEFAULT_TONE`: Default content tone
 - `DEFAULT_PLATFORM`: Default social platform
 - `RATE_LIMITS`: API rate limits
@@ -228,6 +248,15 @@ Key configuration options in `config.py`:
 ### Google Sheets Link Points to Wrong Sheet
 - Make sure you have selected or created the correct sheet in the **Google Sheet Selection** section before generating content.
 - The app now always uses the selected or newly created sheet for saving and linking.
+
+### Image URL Issues
+- **Google Drive URLs**: The system automatically converts Google Drive sharing URLs to direct download URLs
+- **Duplicate URLs**: The system checks for duplicates using normalized URLs to prevent redundant entries
+- **URL Formats**: Supports various URL formats including:
+  - Direct image URLs
+  - Google Drive sharing URLs
+  - Google Drive direct download URLs
+- **Invalid URLs**: Clear error messages are provided for invalid or inaccessible image URLs
 
 ### Sheet Not Visible or Not Editable
 - Ensure your email is set in `GOOGLE_SHARE_EMAIL` in your `.env` file.

@@ -9,6 +9,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from config import Config
 import streamlit as st
+from utils.image_utils import convert_google_drive_url
 
 class GoogleSheetsStorage:
     """Storage implementation using Google Sheets."""
@@ -69,14 +70,13 @@ class GoogleSheetsStorage:
             
             # Use default name if none provided
             sheet_name = sheet_name or "Fashion Content Agent"
-            st.write(f"Using sheet name: {sheet_name}")
             
-            # Check if we already have a spreadsheet for this name
-            if sheet_name not in self._spreadsheet_cache:
+            # Get spreadsheet ID from cache or search for existing
+            spreadsheet_id = self._spreadsheet_cache.get(sheet_name)
+            if not spreadsheet_id:
                 # Search for existing spreadsheet
                 drive_service = self._get_drive_service()
                 query = f"name='{sheet_name}' and mimeType='application/vnd.google-apps.spreadsheet'"
-                st.write(f"Searching for existing spreadsheet with name: {sheet_name}")
                 results = drive_service.files().list(
                     q=query,
                     spaces='drive',
@@ -85,28 +85,24 @@ class GoogleSheetsStorage:
                 
                 if results.get('files'):
                     # Use existing spreadsheet
-                    st.write("Found existing spreadsheet")
-                    self._spreadsheet_cache[sheet_name] = results['files'][0]['id']
-                    st.write(f"Using existing spreadsheet ID: {self._spreadsheet_cache[sheet_name]}")
+                    spreadsheet_id = results['files'][0]['id']
+                    self._spreadsheet_cache[sheet_name] = spreadsheet_id
                 else:
                     # Create new spreadsheet
-                    st.write("No existing spreadsheet found, creating new one")
                     spreadsheet = self._create_spreadsheet(sheet_name)
-                    self._spreadsheet_cache[sheet_name] = spreadsheet['spreadsheetId']
-                    st.write(f"Created new spreadsheet with ID: {self._spreadsheet_cache[sheet_name]}")
+                    spreadsheet_id = spreadsheet['spreadsheetId']
+                    self._spreadsheet_cache[sheet_name] = spreadsheet_id
                     
                     # Share with user
                     if self.share_email:
-                        st.write(f"Attempting to share spreadsheet with: {self.share_email}")
-                        self._share_spreadsheet(spreadsheet['spreadsheetId'])
-            
-            # Get spreadsheet ID from cache
-            spreadsheet_id = self._spreadsheet_cache[sheet_name]
+                        self._share_spreadsheet(spreadsheet_id)
             
             # Check for duplicate image URLs
             current_image_url = content.get('image_url', '')
             if current_image_url:
-                st.write(f"Checking for duplicate image URL: {current_image_url}")
+                # Normalize the current URL
+                normalized_current_url = convert_google_drive_url(current_image_url)
+                
                 try:
                     # Get all existing image URLs from column G (7th column)
                     existing_urls = service.spreadsheets().values().get(
@@ -116,15 +112,15 @@ class GoogleSheetsStorage:
                     
                     if existing_urls.get('values'):
                         # Remove header row and flatten the list
-                        existing_urls_list = [url[0] for url in existing_urls.get('values', [])[1:] if url]
-                        if current_image_url in existing_urls_list:
-                            st.write(f"Duplicate image URL found, skipping: {current_image_url}")
+                        existing_urls_list = []
+                        for url in existing_urls.get('values', [])[1:]:
+                            if url and url[0]:
+                                normalized_url = convert_google_drive_url(url[0])
+                                existing_urls_list.append(normalized_url)
+                        
+                        if normalized_current_url in existing_urls_list:
                             return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
-                        st.write("No duplicate found, proceeding with save")
-                    else:
-                        st.write("No existing entries found in spreadsheet")
                 except Exception as e:
-                    st.write(f"Error checking for duplicate URLs: {str(e)}")
                     raise Exception(f"Error checking for duplicate URLs: {str(e)}")
             
             # Prepare data
@@ -153,12 +149,10 @@ class GoogleSheetsStorage:
                 valueInputOption='RAW',
                 body=body
             ).execute()
-            st.write("Successfully saved new entry to spreadsheet")
             
             return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
             
         except Exception as e:
-            st.write(f"Error saving to Google Sheets: {str(e)}")
             raise Exception(f"Error saving to Google Sheets: {str(e)}")
 
     async def save_batch(
@@ -335,30 +329,22 @@ class GoogleSheetsStorage:
         try:
             drive_service = self._get_drive_service()
             
-            # Log the current service account details
-            st.write("Current service account details:")
-            about = drive_service.about().get(fields="user").execute()
-            st.write(f"Service Account Email: {about.get('user', {}).get('emailAddress')}")
-            
             # First try to transfer ownership
             try:
                 permission = {
                     'type': 'user',
-                    'role': 'owner',  # Try to make them an owner
+                    'role': 'owner',
                     'emailAddress': self.share_email,
                     'transferOwnership': True
                 }
                 
-                st.write(f"Attempting to transfer ownership to: {self.share_email}")
-                transfer_result = drive_service.permissions().create(
+                drive_service.permissions().create(
                     fileId=spreadsheet_id,
                     body=permission,
                     transferOwnership=True,
                     fields='id'
                 ).execute()
-                st.write("Ownership transfer successful")
-            except HttpError as e:
-                st.write(f"Could not transfer ownership: {str(e)}")
+            except HttpError:
                 # If ownership transfer fails, try making them an editor
                 try:
                     permission = {
@@ -367,16 +353,14 @@ class GoogleSheetsStorage:
                         'emailAddress': self.share_email
                     }
                     
-                    st.write("Attempting to grant editor access...")
                     drive_service.permissions().create(
                         fileId=spreadsheet_id,
                         body=permission,
                         fields='id',
                         sendNotificationEmail=True
                     ).execute()
-                    st.write("Editor access granted successfully")
-                except HttpError as e2:
-                    st.write(f"Could not grant editor access: {str(e2)}")
+                except HttpError:
+                    pass
             
             # Make the file accessible via link as a fallback
             try:
@@ -388,33 +372,10 @@ class GoogleSheetsStorage:
                     },
                     fields='id'
                 ).execute()
-                st.write("File made accessible via link")
-            except HttpError as e:
-                st.write(f"Could not update file settings: {str(e)}")
-            
-            # Verify final permissions
-            try:
-                permissions = drive_service.permissions().list(
-                    fileId=spreadsheet_id,
-                    fields='permissions(id,type,role,emailAddress)'
-                ).execute()
-                
-                st.write("\nFinal permissions configuration:")
-                for p in permissions.get('permissions', []):
-                    st.write(f"- Type: {p.get('type')}, Role: {p.get('role')}, Email: {p.get('emailAddress', 'N/A')}")
-                
-                # Get and display the sharing URL
-                file = drive_service.files().get(
-                    fileId=spreadsheet_id,
-                    fields='webViewLink'
-                ).execute()
-                st.write(f"\nDirect sharing link: {file.get('webViewLink')}")
-                
-            except HttpError as e:
-                st.write(f"Could not verify final permissions: {str(e)}")
+            except HttpError:
+                pass
             
         except Exception as error:
-            st.write(f"Error details: {str(error)}")
             raise Exception(f"Error sharing spreadsheet: {error}")
 
     async def close(self) -> None:
@@ -424,4 +385,47 @@ class GoogleSheetsStorage:
             self._sheets_service = None
         if self._drive_service:
             self._drive_service.close()
-            self._drive_service = None 
+            self._drive_service = None
+
+    async def _get_existing_urls(self, sheet_name: str) -> List[str]:
+        """Get all existing image URLs from the sheet."""
+        try:
+            service = self._get_sheets_service()
+            
+            # Get spreadsheet ID
+            spreadsheet_id = self._spreadsheet_cache.get(sheet_name)
+            if not spreadsheet_id:
+                # Search for existing spreadsheet
+                drive_service = self._get_drive_service()
+                query = f"name='{sheet_name}' and mimeType='application/vnd.google-apps.spreadsheet'"
+                results = drive_service.files().list(
+                    q=query,
+                    spaces='drive',
+                    fields='files(id, name)'
+                ).execute()
+                
+                if results.get('files'):
+                    spreadsheet_id = results['files'][0]['id']
+                    self._spreadsheet_cache[sheet_name] = spreadsheet_id
+                else:
+                    return []  # No spreadsheet exists yet
+            
+            # Get all existing image URLs from column G (7th column)
+            existing_urls = service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range='Sheet1!G:G'
+            ).execute()
+            
+            if existing_urls.get('values'):
+                # Remove header row and normalize URLs
+                normalized_urls = []
+                for url in existing_urls.get('values', [])[1:]:
+                    if url and url[0]:
+                        normalized_url = convert_google_drive_url(url[0])
+                        normalized_urls.append(normalized_url)
+                return normalized_urls
+            
+            return []
+            
+        except Exception as e:
+            raise Exception(f"Error getting existing URLs: {str(e)}") 

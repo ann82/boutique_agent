@@ -30,15 +30,18 @@ class FashionContentAgent:
             if not is_valid_image_url(image_url):
                 raise ValueError("Invalid image URL")
             
-            # Check for duplicate URL in the sheet
+            # Check for duplicate URL in the sheet before any processing
             try:
                 # Get all existing image URLs from the sheet
                 service = self.storage._get_sheets_service()
                 spreadsheet_id = self.storage._spreadsheet_cache.get(sheet_name or "Fashion Content Agent")
-                if spreadsheet_id:
+                if not spreadsheet_id:
+                    # If sheet doesn't exist yet, it's not a duplicate
+                    pass
+                else:
                     existing_urls = service.spreadsheets().values().get(
                         spreadsheetId=spreadsheet_id,
-                        range='Sheet1!G:G'
+                        range='Sheet1!G:G'  # Column G contains image URLs
                     ).execute()
                     
                     if existing_urls.get('values'):
@@ -49,11 +52,11 @@ class FashionContentAgent:
                                 "content": {"image_url": image_url},
                                 "vision_analysis": {},
                                 "sheet_url": f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}",
-                                "message": "Image URL already exists in the sheet"
+                                "message": f"Image URL already exists in sheet '{sheet_name or 'Fashion Content Agent'}'"
                             }
             except Exception as e:
-                # If there's an error checking for duplicates, continue with processing
-                pass
+                # If there's an error checking for duplicates, raise an exception
+                raise Exception(f"Error checking for duplicate URLs in sheet '{sheet_name or 'Fashion Content Agent'}': {str(e)}")
             
             # Get vision analysis
             vision_analysis = await self.vision_agent.analyze_image(image_url)
@@ -86,10 +89,42 @@ class FashionContentAgent:
             if len(image_urls) > 3:
                 raise ValueError("Maximum 3 images can be processed at a time")
             
-            # Check for duplicate URLs
+            # Check for duplicate URLs in the input
             unique_urls = list(set(image_urls))
             if len(unique_urls) < len(image_urls):
-                raise ValueError("Duplicate image URLs are not allowed")
+                raise ValueError("Duplicate image URLs are not allowed in the input")
+            
+            # Check for duplicate URLs in the sheet
+            try:
+                service = self.storage._get_sheets_service()
+                spreadsheet_id = self.storage._spreadsheet_cache.get(sheet_name or "Fashion Content Agent")
+                if not spreadsheet_id:
+                    # If sheet doesn't exist yet, no duplicates to check
+                    pass
+                else:
+                    existing_urls = service.spreadsheets().values().get(
+                        spreadsheetId=spreadsheet_id,
+                        range='Sheet1!G:G'  # Column G contains image URLs
+                    ).execute()
+                    
+                    if existing_urls.get('values'):
+                        # Remove header row and flatten the list
+                        existing_urls_list = [url[0] for url in existing_urls.get('values', [])[1:] if url]
+                        # Filter out URLs that already exist in the sheet
+                        new_urls = [url for url in unique_urls if url not in existing_urls_list]
+                        
+                        if not new_urls:
+                            return [{
+                                "content": {"image_url": url},
+                                "vision_analysis": {},
+                                "sheet_url": f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}",
+                                "message": f"Image URL already exists in sheet '{sheet_name or 'Fashion Content Agent'}'"
+                            } for url in unique_urls]
+                        
+                        # Update unique_urls to only include new URLs
+                        unique_urls = new_urls
+            except Exception as e:
+                raise Exception(f"Error checking for duplicate URLs in sheet '{sheet_name or 'Fashion Content Agent'}': {str(e)}")
             
             # Process images concurrently
             tasks = []

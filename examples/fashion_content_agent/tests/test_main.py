@@ -106,15 +106,13 @@ async def test_process_image_error_checking_duplicates(mock_valid_url, agent, mo
     mock_session['storage']._get_sheets_service.return_value = mock_service
     mock_session['storage']._spreadsheet_cache = {"Fashion Content Agent": "test_id"}
 
-    # Process the image
-    result = await agent.process_image("https://example.com/error_image.jpg")
-
-    # Check that vision and content generation were still called
-    mock_session['vision_agent'].analyze_image.assert_called_once_with("https://example.com/error_image.jpg")
-    mock_session['content_agent'].generate_content.assert_called_once_with("https://example.com/error_image.jpg")
-
-    # Check the result
-    assert "vision_analysis" in result
-    assert "content" in result
-    assert result["content"]["image_url"] == "https://example.com/error_image.jpg"
-    assert result["sheet_url"] == "https://example.com/sheet" 
+    # Process the image and expect an exception
+    with pytest.raises(Exception) as exc_info:
+        await agent.process_image("https://example.com/error_image.jpg")
+    
+    # Check the error message
+    assert "Error checking for duplicate URLs" in str(exc_info.value)
+    
+    # Check that vision and content generation were not called
+    mock_session['vision_agent'].analyze_image.assert_not_called()
+    mock_session['content_agent'].generate_content.assert_not_called() 

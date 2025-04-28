@@ -1,6 +1,10 @@
+"""
+Tests for Google Sheets storage implementation.
+"""
 import pytest
 from unittest.mock import MagicMock, patch
 from utils.document_storage import GoogleSheetsStorage
+from utils.image_utils import convert_google_drive_url
 
 @pytest.fixture
 def mock_services():
@@ -336,4 +340,129 @@ async def test_duplicate_url_error_handling(storage, mock_services):
         vision_analysis = {'test': 'data'}
         
         with pytest.raises(Exception, match="Error checking for duplicate URLs"):
-            await storage.save(content, vision_analysis) 
+            await storage.save(content, vision_analysis)
+
+@pytest.mark.asyncio
+async def test_duplicate_url_nonexistent_sheet(storage, mock_services):
+    """Test handling of duplicate URLs when the sheet doesn't exist yet."""
+    mock_sheets, mock_drive = mock_services
+    
+    # Mock no existing spreadsheet
+    mock_drive.files().list().execute.return_value = {'files': []}
+    mock_sheets.spreadsheets().create().execute.return_value = {'spreadsheetId': 'new123'}
+    
+    # Mock the values().get() call to return empty values for first save
+    mock_sheets.spreadsheets().values().get().execute.return_value = {
+        'values': [['Image URL']]  # Only header row
+    }
+    mock_sheets.spreadsheets().values().append().execute.return_value = {}
+    
+    # Test with a new URL
+    content = {'image_url': 'https://example.com/image1.jpg'}
+    vision_analysis = {'test': 'data'}
+    
+    # Reset the append call counter
+    mock_sheets.spreadsheets().values().append.reset_mock()
+    
+    # First save should create the sheet
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='New Sheet')
+    assert 'new123' in sheet_url
+    
+    # Verify sheet was created and first URL was saved
+    assert mock_sheets.spreadsheets().create.called
+    assert mock_sheets.spreadsheets().values().append.call_count == 1
+    
+    # Mock the values().get() call to return the first URL for second save
+    mock_sheets.spreadsheets().values().get().execute.return_value = {
+        'values': [
+            ['Image URL'],  # Header row
+            ['https://example.com/image1.jpg']  # First URL
+        ]
+    }
+    
+    # Reset the append call counter again
+    mock_sheets.spreadsheets().values().append.reset_mock()
+    
+    # Second save with same URL should detect duplicate
+    sheet_url2 = await storage.save(content, vision_analysis, sheet_name='New Sheet')
+    assert 'new123' in sheet_url2
+    
+    # Verify no new append was made
+    assert mock_sheets.spreadsheets().values().append.call_count == 0
+
+@pytest.mark.asyncio
+async def test_duplicate_url_early_check():
+    """Test early duplicate URL check before processing."""
+    # Mock the storage
+    storage = GoogleSheetsStorage()
+    storage._get_sheets_service = MagicMock()
+    storage._get_drive_service = MagicMock()
+    
+    # Mock the service
+    service = MagicMock()
+    storage._get_sheets_service.return_value = service
+    
+    # Mock the drive service and its chained methods
+    drive_service = MagicMock()
+    files_mock = MagicMock()
+    list_mock = MagicMock()
+    drive_service.files.return_value = files_mock
+    files_mock.list.return_value = list_mock
+    list_mock.execute.return_value = {
+        'files': [{'id': 'test_spreadsheet_id', 'name': 'Test Sheet'}]
+    }
+    storage._get_drive_service.return_value = drive_service
+    
+    # Mock the sheets service and its chained methods
+    sheets_mock = MagicMock()
+    values_mock = MagicMock()
+    get_mock = MagicMock()
+    service.spreadsheets.return_value = sheets_mock
+    sheets_mock.values.return_value = values_mock
+    values_mock.get.return_value = get_mock
+    get_mock.execute.return_value = {
+        'values': [
+            ['Image URL'],  # Header
+            ['https://drive.google.com/file/d/123/view'],
+            ['https://drive.google.com/uc?export=download&id=456']
+        ]
+    }
+    
+    # Test URLs
+    test_urls = [
+        'https://drive.google.com/file/d/123/view',  # Duplicate (same as first existing URL)
+        'https://drive.google.com/uc?export=download&id=789',  # New URL
+        'https://drive.google.com/uc?export=download&id=456'  # Duplicate (same as second existing URL)
+    ]
+    
+    # Get existing URLs
+    existing_urls = await storage._get_existing_urls('Test Sheet')
+    
+    # Check for duplicates
+    duplicate_urls = []
+    valid_urls = []
+    
+    for url in test_urls:
+        normalized_url = convert_google_drive_url(url)
+        if normalized_url in existing_urls:
+            duplicate_urls.append(url)
+        else:
+            valid_urls.append(url)
+    
+    # Verify results
+    assert len(duplicate_urls) == 2
+    assert len(valid_urls) == 1
+    assert 'https://drive.google.com/file/d/123/view' in duplicate_urls
+    assert 'https://drive.google.com/uc?export=download&id=456' in duplicate_urls
+    assert 'https://drive.google.com/uc?export=download&id=789' in valid_urls
+    
+    # Verify service calls
+    files_mock.list.assert_called_once_with(
+        q="name='Test Sheet' and mimeType='application/vnd.google-apps.spreadsheet'",
+        spaces='drive',
+        fields='files(id, name)'
+    )
+    values_mock.get.assert_called_once_with(
+        spreadsheetId='test_spreadsheet_id',
+        range='Sheet1!G:G'
+    ) 
