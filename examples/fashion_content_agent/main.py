@@ -30,6 +30,31 @@ class FashionContentAgent:
             if not is_valid_image_url(image_url):
                 raise ValueError("Invalid image URL")
             
+            # Check for duplicate URL in the sheet
+            try:
+                # Get all existing image URLs from the sheet
+                service = self.storage._get_sheets_service()
+                spreadsheet_id = self.storage._spreadsheet_cache.get(sheet_name or "Fashion Content Agent")
+                if spreadsheet_id:
+                    existing_urls = service.spreadsheets().values().get(
+                        spreadsheetId=spreadsheet_id,
+                        range='Sheet1!G:G'
+                    ).execute()
+                    
+                    if existing_urls.get('values'):
+                        # Remove header row and flatten the list
+                        existing_urls_list = [url[0] for url in existing_urls.get('values', [])[1:] if url]
+                        if image_url in existing_urls_list:
+                            return {
+                                "content": {"image_url": image_url},
+                                "vision_analysis": {},
+                                "sheet_url": f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}",
+                                "message": "Image URL already exists in the sheet"
+                            }
+            except Exception as e:
+                # If there's an error checking for duplicates, continue with processing
+                pass
+            
             # Get vision analysis
             vision_analysis = await self.vision_agent.analyze_image(image_url)
             

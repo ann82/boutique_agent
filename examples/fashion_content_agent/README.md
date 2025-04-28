@@ -24,6 +24,13 @@ graph TD
 
 ## Recent Optimizations
 
+### Testing Improvements
+- **Enhanced Test Coverage**: Improved test suite with proper mocking of external services
+- **URL Validation Mocking**: Added mocks for image URL validation to prevent actual HTTP requests during tests
+- **Duplicate URL Testing**: Comprehensive test cases for duplicate URL detection and handling
+- **Error Scenario Coverage**: Added tests for various error scenarios and edge cases
+- **Async Test Support**: Proper async/await testing with pytest-asyncio
+
 ### Performance Improvements
 - **Async/Await Support**: All API calls now use async/await for better performance
 - **Connection Pooling**: Implemented connection pooling with aiohttp for efficient API requests
@@ -143,6 +150,41 @@ GOOGLE_SHARE_EMAIL=your_email@domain.com
 - Create service account credentials
 - Download credentials JSON file
 - Share your Google Sheet with the service account email
+
+## Testing
+
+### Running Tests
+```bash
+# Run all tests
+python -m pytest tests/ -v
+
+# Run specific test file
+python -m pytest tests/test_main.py -v
+
+# Run tests with coverage
+python -m pytest tests/ --cov=. -v
+```
+
+### Test Structure
+The test suite is organized into several key areas:
+- **Main Agent Tests**: Testing the core FashionContentAgent functionality
+- **Storage Tests**: Testing Google Sheets integration and duplicate handling
+- **Cache Tests**: Testing caching mechanisms and performance optimizations
+- **Validation Tests**: Testing input validation and error handling
+
+### Test Features
+- **Mocked Services**: All external services (OpenAI, Google Sheets) are properly mocked
+- **Async Testing**: Uses pytest-asyncio for testing async functions
+- **Error Scenarios**: Comprehensive testing of error cases and edge conditions
+- **Duplicate Detection**: Tests for proper handling of duplicate image URLs
+- **Input Validation**: Tests for URL validation and content format checking
+
+### Best Practices
+- Tests use proper fixtures and mocks to avoid external dependencies
+- Each test focuses on a single piece of functionality
+- Tests are deterministic and don't rely on external services
+- Clear test names and documentation for maintainability
+- Proper setup and teardown of test resources
 
 ## Usage
 

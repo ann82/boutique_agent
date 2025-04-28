@@ -78,6 +78,13 @@ if st.button("Generate Content"):
                             for i, result in enumerate(results, 1):
                                 st.subheader(f"Image {i}")
                                 
+                                # Check if this is a duplicate URL
+                                if "message" in result and result["message"] == "Image URL already exists in the sheet":
+                                    st.warning(f"Image URL already exists in the sheet: {result['content']['image_url']}")
+                                    st.markdown(f"[Open Sheet]({result['sheet_url']})")
+                                    st.markdown("---")
+                                    continue
+                                
                                 # Show content
                                 st.markdown("**Generated Content**")
                                 st.json(result["content"])
