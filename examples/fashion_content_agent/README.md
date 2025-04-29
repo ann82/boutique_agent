@@ -346,6 +346,17 @@ Key configuration options in `config.py`:
   - Google Drive direct download URLs
 - **Invalid URLs**: Clear error messages are provided for invalid or inaccessible image URLs
 
+> **Common Error Example:**
+> 
+> The provided URL does not point to an image file. (Content type: text/html; charset=utf-8)
+> 
+> **How to fix:**
+> - Make sure the image URL is publicly accessible.
+> - For Google Drive, the file must be shared with 'Anyone with the link' and not restricted.
+> - The link must point directly to an image file (not a web page or preview).
+> 
+> If you are using Google Drive, open the file, click 'Share', and set access to 'Anyone with the link'. Then use the direct file link.
+
 ### Sheet Not Visible or Not Editable
 - Ensure your email is set in `GOOGLE_SHARE_EMAIL` in your `.env` file.
 - The service account must have permission to share and edit the sheet.

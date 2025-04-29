@@ -66,7 +66,16 @@ def get_image_from_url(url: str) -> str:
             # Check if the response is actually an image
             content_type = response.headers.get('content-type', '')
             if not content_type.startswith('image/'):
-                raise ValueError(f"URL does not point to an image. Content type: {content_type}")
+                raise ValueError(
+                    f"The provided URL does not point to an image file. "
+                    f"(Content type: {content_type})\n"
+                    "\n"
+                    "**How to fix:**\n"
+                    "- Make sure the image URL is publicly accessible.\n"
+                    "- For Google Drive, the file must be shared with 'Anyone with the link' and not restricted.\n"
+                    "- The link must point directly to an image file (not a web page or preview).\n"
+                    "\nIf you are using Google Drive, open the file, click 'Share', and set access to 'Anyone with the link'. Then use the direct file link."
+                )
             
             # Get content length
             content_length = int(response.headers.get('content-length', 0))
@@ -147,7 +156,16 @@ def is_valid_image_url(url: str) -> tuple[bool, Optional[str]]:
         # Check if content type is an image
         content_type = response.headers.get('content-type', '')
         if not content_type.startswith('image/'):
-            return False, f"URL does not point to an image. Content type: {content_type}"
+            return False, (
+                f"The provided URL does not point to an image file. "
+                f"(Content type: {content_type})\n"
+                "\n"
+                "**How to fix:**\n"
+                "- Make sure the image URL is publicly accessible.\n"
+                "- For Google Drive, the file must be shared with 'Anyone with the link' and not restricted.\n"
+                "- The link must point directly to an image file (not a web page or preview).\n"
+                "\nIf you are using Google Drive, open the file, click 'Share', and set access to 'Anyone with the link'. Then use the direct file link."
+            )
         
         return True, None
         
@@ -221,7 +239,16 @@ def download_image(url: str) -> Optional[bytes]:
             # Check if the response is actually an image
             content_type = response.headers.get('content-type', '')
             if not content_type.startswith('image/'):
-                raise ValueError(f"URL does not point to an image. Content type: {content_type}")
+                raise ValueError(
+                    f"The provided URL does not point to an image file. "
+                    f"(Content type: {content_type})\n"
+                    "\n"
+                    "**How to fix:**\n"
+                    "- Make sure the image URL is publicly accessible.\n"
+                    "- For Google Drive, the file must be shared with 'Anyone with the link' and not restricted.\n"
+                    "- The link must point directly to an image file (not a web page or preview).\n"
+                    "\nIf you are using Google Drive, open the file, click 'Share', and set access to 'Anyone with the link'. Then use the direct file link."
+                )
             
             # Read the image data
             buffer = BytesIO()
