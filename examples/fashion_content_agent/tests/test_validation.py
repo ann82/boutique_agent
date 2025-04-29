@@ -2,13 +2,7 @@
 Tests for validation functions.
 """
 import pytest
-import sys
-import os
 from unittest.mock import patch
-
-# Add the parent directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from utils.validation import (
     validate_image_url,
     validate_content_format,
@@ -20,7 +14,7 @@ from utils.validation import (
 def test_validate_image_url(mock_is_valid):
     """Test image URL validation."""
     # Test valid URL
-    mock_is_valid.return_value = True
+    mock_is_valid.return_value = (True, None)
     validate_image_url("https://example.com/image.jpg")
     
     # Test empty URL
@@ -28,7 +22,7 @@ def test_validate_image_url(mock_is_valid):
         validate_image_url("")
         
     # Test invalid URL
-    mock_is_valid.return_value = False
+    mock_is_valid.return_value = (False, "Invalid URL")
     with pytest.raises(ImageValidationError):
         validate_image_url("not_a_url")
 
@@ -69,8 +63,8 @@ async def test_validate_content_format_invalid_url(mock_valid_url):
         'image_url': 'invalid_url'
     }
     
-    # Should raise ValueError
-    with pytest.raises(ValueError) as exc_info:
+    # Should raise ImageValidationError
+    with pytest.raises(ImageValidationError) as exc_info:
         await validate_content_format(content)
     assert "Invalid image URL" in str(exc_info.value)
 
@@ -82,7 +76,7 @@ async def test_validate_content_format_missing_fields():
         'description': 'Test Description'
     }
     
-    # Should raise ValueError
-    with pytest.raises(ValueError) as exc_info:
+    # Should raise ContentValidationError
+    with pytest.raises(ContentValidationError) as exc_info:
         await validate_content_format(content)
-    assert "Missing required fields" in str(exc_info.value) 
+    assert "Missing required field" in str(exc_info.value) 

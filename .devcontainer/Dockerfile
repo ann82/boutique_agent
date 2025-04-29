@@ -1,6 +1,13 @@
-FROM mcr.microsoft.com/devcontainers/python:3.12-bookworm
+FROM python:3.11-slim
 
-COPY requirements.txt /tmp/pip-tmp/
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements.txt \
-    && rm -rf /tmp/pip-tmp
+# Set working directory
+WORKDIR /workspace
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt

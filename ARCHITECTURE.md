@@ -67,11 +67,17 @@ graph TD
 - Batch validation capabilities
 
 ### 2. Duplicate Detection System
-- Maintains a cache of processed images
-- Uses MD5 hashing for image comparison
-- Prevents redundant processing
-- Optimizes resource usage
-- Implements cache cleanup
+- Maintains a cache of processed images using ImageHashCache
+- Uses perceptual hashing (average_hash) for image comparison
+- Implements Hamming distance-based similarity detection
+- Features:
+  - Configurable similarity threshold
+  - Efficient cache management
+  - Support for similar but not identical images
+  - Automatic cache cleanup
+  - Batch processing support
+- Prevents redundant processing while allowing for similar variations
+- Optimizes resource usage through efficient hashing
 
 ### 3. Vision Analysis Engine
 - Analyzes fashion images for:
@@ -132,6 +138,11 @@ graph TD
    - Cache security
 
 ## Testing Architecture
+
+- All tests use `pytest` with fixtures and patching to ensure isolation and prevent side effects.
+- Tests are grouped by feature (batch processing, logging, duplicate detection, etc.) and can be run individually or as a suite.
+- Markers (see `pytest.ini`) allow for targeted test runs (e.g., `-m batch` for batch processing tests).
+- The test suite is designed for reliability and maintainability, supporting rapid development and refactoring.
 
 1. **Unit Tests**:
    - Batch processing tests

@@ -1,23 +1,14 @@
 {
-    "name": "python-ai-agent-frameworks-demos",
-    "build": {
-        "dockerfile": "Dockerfile",
-        "context": ".."
-    },
-    "features": {
-        "ghcr.io/azure/azure-dev/azd:latest": {}
-    },
+    "name": "Fashion Content Agent",
+    "dockerFile": "Dockerfile",
     "customizations": {
         "vscode": {
             "extensions": [
                 "ms-python.python",
-                "ms-azuretools.vscode-bicep"
-            ],
-            "python.defaultInterpreterPath": "/usr/local/bin/python"
+                "ms-python.vscode-pylance",
+                "ms-python.black-formatter"
+            ]
         }
     },
-    "remoteUser": "vscode",
-    "hostRequirements": {
-        "memory": "8gb"
-    }
+    "postCreateCommand": "pip install -e ."
 }

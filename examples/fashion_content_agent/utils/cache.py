@@ -196,4 +196,100 @@ class CacheManager:
         return self.stats
 
 # Create a global cache manager instance
-cache_manager = CacheManager() 
+cache_manager = CacheManager()
+
+class ImageHashCache:
+    """Cache for storing image hashes to detect duplicates."""
+    
+    def __init__(self, max_size: int = 1000, expiry_seconds: int = 3600):
+        """
+        Initialize the image hash cache.
+        
+        Args:
+            max_size: Maximum number of entries in the cache
+            expiry_seconds: Time in seconds after which entries expire
+        """
+        self._cache: Dict[str, tuple[str, float]] = {}
+        self._max_size = max_size
+        self._expiry_seconds = expiry_seconds
+    
+    def get(self, image_hash: str) -> Optional[str]:
+        """
+        Get the URL associated with an image hash if it exists and hasn't expired.
+        
+        Args:
+            image_hash: The hash to look up
+            
+        Returns:
+            The URL if found and not expired, None otherwise
+        """
+        if image_hash in self._cache:
+            url, timestamp = self._cache[image_hash]
+            if timestamp + self._expiry_seconds > datetime.now().timestamp():
+                return url
+            else:
+                del self._cache[image_hash]
+        return None
+    
+    def set(self, image_hash: str, url: str) -> None:
+        """
+        Store an image hash and its associated URL.
+        
+        Args:
+            image_hash: The hash to store
+            url: The URL to associate with the hash
+        """
+        # Remove oldest entries if cache is full
+        if len(self._cache) >= self._max_size:
+            oldest = min(self._cache.items(), key=lambda x: x[1][1])
+            del self._cache[oldest[0]]
+        
+        self._cache[image_hash] = (url, datetime.now().timestamp())
+
+class SpreadsheetCache:
+    """Cache for storing spreadsheet IDs."""
+    
+    def __init__(self, max_size: int = 100, expiry_seconds: int = 3600):
+        """
+        Initialize the spreadsheet cache.
+        
+        Args:
+            max_size: Maximum number of entries in the cache
+            expiry_seconds: Time in seconds after which entries expire
+        """
+        self._cache: Dict[str, tuple[str, float]] = {}
+        self._max_size = max_size
+        self._expiry_seconds = expiry_seconds
+    
+    def get(self, sheet_name: str) -> Optional[str]:
+        """
+        Get the spreadsheet ID for a sheet name if it exists and hasn't expired.
+        
+        Args:
+            sheet_name: The name of the sheet
+            
+        Returns:
+            The spreadsheet ID if found and not expired, None otherwise
+        """
+        if sheet_name in self._cache:
+            spreadsheet_id, timestamp = self._cache[sheet_name]
+            if timestamp + self._expiry_seconds > datetime.now().timestamp():
+                return spreadsheet_id
+            else:
+                del self._cache[sheet_name]
+        return None
+    
+    def set(self, sheet_name: str, spreadsheet_id: str) -> None:
+        """
+        Store a sheet name and its associated spreadsheet ID.
+        
+        Args:
+            sheet_name: The name of the sheet
+            spreadsheet_id: The ID of the spreadsheet
+        """
+        # Remove oldest entries if cache is full
+        if len(self._cache) >= self._max_size:
+            oldest = min(self._cache.items(), key=lambda x: x[1][1])
+            del self._cache[oldest[0]]
+        
+        self._cache[sheet_name] = (spreadsheet_id, datetime.now().timestamp()) 

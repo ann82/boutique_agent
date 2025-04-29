@@ -24,25 +24,28 @@ class TestBatchProcessing:
         ]
     
     @pytest.mark.asyncio
+    @patch('utils.batch_processing.validate_image_url')
+    @patch('utils.batch_processing.is_duplicate_image')
     @patch('requests.head')
-    @patch('utils.validation.validate_image_url')
-    @patch('utils.duplicate_detection.is_duplicate_image')
-    async def test_url_validation(self, mock_duplicate, mock_validate, mock_head):
+    async def test_url_validation(self, mock_head, mock_duplicate, mock_validate):
         """Test URL validation in batch processing."""
-        # Mock validation to return success
         mock_validate.return_value = (True, None)
+        mock_duplicate.return_value = (False, None)
         
         # Mock successful head request
         mock_response = MagicMock()
         mock_head.return_value = mock_response
         
-        # Mock duplicate check to return not duplicate
-        mock_duplicate.return_value = (False, None)
-        
         # Test valid URLs
         results = await process_batch(self.valid_urls)
         assert len(results) == len(self.valid_urls)
         assert all(result["status"] == "success" for result in results)
+        
+        # Test invalid URL
+        mock_validate.return_value = (False, "Invalid URL")
+        results = await process_batch(["invalid_url"])
+        assert len(results) == 1
+        assert results[0]["status"] == "error"
     
     @pytest.mark.asyncio
     async def test_max_urls_limit(self):
@@ -53,47 +56,42 @@ class TestBatchProcessing:
         assert "Maximum number of URLs exceeded" in str(exc_info.value)
     
     @pytest.mark.asyncio
+    @patch('utils.batch_processing.validate_image_url')
+    @patch('utils.batch_processing.is_duplicate_image')
     @patch('requests.head')
-    @patch('utils.validation.validate_image_url')
-    @patch('utils.duplicate_detection.is_duplicate_image')
-    async def test_batch_processing(self, mock_duplicate, mock_validate, mock_head):
+    async def test_batch_processing(self, mock_head, mock_duplicate, mock_validate):
         """Test batch processing of multiple images."""
-        # Mock validation to return success
         mock_validate.return_value = (True, None)
+        mock_duplicate.return_value = (False, None)
         
         # Mock successful head request
         mock_response = MagicMock()
         mock_head.return_value = mock_response
-        
-        # Mock duplicate check to return not duplicate
-        mock_duplicate.return_value = (False, None)
         
         results = await process_batch(self.valid_urls)
         assert len(results) == len(self.valid_urls)
         assert all(result["status"] == "success" for result in results)
     
     @pytest.mark.asyncio
+    @patch('utils.batch_processing.validate_image_url')
+    @patch('utils.batch_processing.is_duplicate_image')
     @patch('requests.head')
-    @patch('utils.validation.validate_image_url')
-    @patch('utils.duplicate_detection.is_duplicate_image')
-    async def test_partial_failure_handling(self, mock_duplicate, mock_validate, mock_head):
+    async def test_partial_failure_handling(self, mock_head, mock_duplicate, mock_validate):
         """Test handling of partial failures in batch processing."""
-        # Mock validation to succeed for some URLs and fail for others
-        def mock_validate_func(url):
-            if "image1" in url:
-                return (False, "Invalid URL")
-            return (True, None)
-        
-        mock_validate.side_effect = mock_validate_func
+        # Simulate one valid and one invalid
+        mock_validate.side_effect = [(True, None), (False, "Invalid URL")]
+        mock_duplicate.side_effect = [(False, None), (False, None)]
         
         # Mock successful head request
         mock_response = MagicMock()
         mock_head.return_value = mock_response
         
-        # Mock duplicate check to return not duplicate
-        mock_duplicate.return_value = (False, None)
-        
         results = await process_batch(self.valid_urls)
         assert len(results) == len(self.valid_urls)
         assert any(result["status"] == "error" for result in results)
-        assert any(result["status"] == "success" for result in results) 
+        assert any(result["status"] == "success" for result in results)
+
+    def _run_batch_processing(self):
+        # This should call your actual batch processing function with test data
+        # Replace this with the real call and test data
+        return [{"status": "success"}, {"status": "success"}] 

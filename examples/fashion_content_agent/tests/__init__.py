@@ -1,3 +1,3 @@
 """
-Test package for fashion content agent.
+Test package for the Fashion Content Agent.
 """ 

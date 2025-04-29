@@ -1,3 +1,3 @@
 """
-Unit tests for the Fashion Content Agent application.
+Unit tests for the fashion content agent.
 """ 

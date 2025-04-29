@@ -173,11 +173,38 @@ A Streamlit-based application that automates the generation of marketing content
   - Marketing captions
   - SEO-friendly hashtags
   - Accessibility-focused alt text
-- Intelligent duplicate detection to prevent redundant processing
+- Advanced duplicate detection using perceptual hashing:
+  - Configurable similarity threshold
+  - Hamming distance-based comparison
+  - Efficient cache management
+  - Support for similar but not identical images
 - Automatic Google Sheets integration with email sharing
 - Robust error handling and logging system
 - Support for various image sources (including Google Drive)
 - Comprehensive test suite for reliability
+
+## Testing
+
+This project uses `pytest` for all testing, with a focus on isolation, reliability, and coverage.  
+Tests are organized into unit tests and feature-specific suites (batch processing, logging, duplicate detection, etc.), and use fixtures and patching to avoid side effects.
+
+**To run the main tests:**
+
+```bash
+# 1. Run all tests (with coverage)
+python -m pytest examples/fashion_content_agent/tests/ -v
+
+# 2. Run all unit tests only
+python -m pytest examples/fashion_content_agent/tests/unit/ -v
+
+# 3. Run a specific suite, e.g. batch processing
+python -m pytest examples/fashion_content_agent/tests/unit/test_batch_processing.py -v
+```
+
+Tests use markers (see `pytest.ini`) for easy filtering, e.g.:
+```bash
+python -m pytest examples/fashion_content_agent/tests/ -m batch
+```
 
 ## Getting Started
 
@@ -245,29 +272,6 @@ A Streamlit-based application that automates the generation of marketing content
    - Generate content
    - Save to Google Sheets
    - Share the sheet with your email
-
-## Testing
-
-The project includes a comprehensive test suite:
-
-```bash
-# Run all tests
-python -m pytest tests/unit/ -v
-
-# Run specific test categories
-python -m pytest tests/unit/test_batch_processing.py
-python -m pytest tests/unit/test_email_notification.py
-python -m pytest tests/unit/test_logging.py
-python -m pytest tests/unit/test_duplicate_detection.py
-```
-
-Test coverage includes:
-- Batch processing functionality
-- Email notification system
-- Logging implementation
-- Duplicate detection
-- Error handling
-- Cache management
 
 ## Error Handling
 

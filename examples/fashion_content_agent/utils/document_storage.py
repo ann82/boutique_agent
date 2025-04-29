@@ -1,5 +1,5 @@
 """
-Google Sheets storage implementation.
+Google Sheets storage functionality for the Fashion Content Agent.
 """
 import os
 import json
@@ -10,9 +10,10 @@ from googleapiclient.errors import HttpError
 from config import Config
 import streamlit as st
 from utils.image_utils import convert_google_drive_url
+from utils.cache import SpreadsheetCache
 
 class GoogleSheetsStorage:
-    """Storage implementation using Google Sheets."""
+    """Google Sheets storage implementation."""
     
     def __init__(
         self,
@@ -20,13 +21,21 @@ class GoogleSheetsStorage:
         share_email: Optional[str] = None,
         batch_size: int = 100
     ):
+        """
+        Initialize Google Sheets storage.
+        
+        Args:
+            credentials_file: Path to Google API credentials file
+            share_email: Email to share spreadsheets with (optional)
+            batch_size: Number of items to save in a single batch
+        """
         self.credentials_file = credentials_file or Config.GOOGLE_CREDENTIALS_FILE
         self.share_email = share_email or Config.GOOGLE_SHARE_EMAIL
         self.batch_size = batch_size
         self._sheets_service = None
         self._drive_service = None
         self._spreadsheet_id = None
-        self._spreadsheet_cache = {}  # Cache for spreadsheet IDs
+        self._spreadsheet_cache = SpreadsheetCache()
 
     def _get_sheets_service(self):
         """Get or create the Google Sheets service."""
@@ -86,12 +95,12 @@ class GoogleSheetsStorage:
                 if results.get('files'):
                     # Use existing spreadsheet
                     spreadsheet_id = results['files'][0]['id']
-                    self._spreadsheet_cache[sheet_name] = spreadsheet_id
+                    self._spreadsheet_cache.set(sheet_name, spreadsheet_id)
                 else:
                     # Create new spreadsheet
                     spreadsheet = self._create_spreadsheet(sheet_name)
                     spreadsheet_id = spreadsheet['spreadsheetId']
-                    self._spreadsheet_cache[sheet_name] = spreadsheet_id
+                    self._spreadsheet_cache.set(sheet_name, spreadsheet_id)
                     
                     # Share with user
                     if self.share_email:
@@ -119,9 +128,11 @@ class GoogleSheetsStorage:
                                 existing_urls_list.append(normalized_url)
                         
                         if normalized_current_url in existing_urls_list:
-                            return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
+                            raise ValueError(f"Image URL already exists in sheet '{sheet_name}'")
                 except Exception as e:
-                    raise Exception(f"Error checking for duplicate URLs: {str(e)}")
+                    if isinstance(e, ValueError):
+                        raise
+                    raise Exception(f"Error checking for duplicate URLs in sheet '{sheet_name}': {str(e)}")
             
             # Prepare data
             values = [
@@ -152,6 +163,8 @@ class GoogleSheetsStorage:
             
             return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
             
+        except ValueError:
+            raise
         except Exception as e:
             raise Exception(f"Error saving to Google Sheets: {str(e)}")
 
@@ -181,18 +194,18 @@ class GoogleSheetsStorage:
                 
                 if results.get('files'):
                     # Use existing spreadsheet
-                    self._spreadsheet_cache[sheet_name] = results['files'][0]['id']
+                    self._spreadsheet_cache.set(sheet_name, results['files'][0]['id'])
                 else:
                     # Create new spreadsheet
                     spreadsheet = self._create_spreadsheet(sheet_name)
-                    self._spreadsheet_cache[sheet_name] = spreadsheet['spreadsheetId']
+                    self._spreadsheet_cache.set(sheet_name, spreadsheet['spreadsheetId'])
                     
                     # Share with user
                     if self.share_email:
                         self._share_spreadsheet(spreadsheet['spreadsheetId'])
             
             # Get spreadsheet ID from cache
-            spreadsheet_id = self._spreadsheet_cache[sheet_name]
+            spreadsheet_id = self._spreadsheet_cache.get(sheet_name)
             
             # Prepare batch data
             values = []
@@ -406,7 +419,7 @@ class GoogleSheetsStorage:
                 
                 if results.get('files'):
                     spreadsheet_id = results['files'][0]['id']
-                    self._spreadsheet_cache[sheet_name] = spreadsheet_id
+                    self._spreadsheet_cache.set(sheet_name, spreadsheet_id)
                 else:
                     return []  # No spreadsheet exists yet
             

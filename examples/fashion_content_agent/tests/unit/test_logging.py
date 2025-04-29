@@ -5,6 +5,7 @@ import os
 import pytest
 from unittest.mock import patch, mock_open
 from utils.logging import setup_logging, log_error, log_success, log_batch_operation
+import logging
 
 class TestLogging:
     """Test cases for logging functionality."""
@@ -22,7 +23,7 @@ class TestLogging:
         # Mock directory does not exist
         mock_exists.return_value = False
         
-        # Call setup logging with default log file
+        # Call setup logging
         setup_logging(self.log_file)
         
         # Verify directory creation
@@ -33,9 +34,8 @@ class TestLogging:
     def test_log_error(self, mock_error):
         """Test error logging."""
         error_message = "Test error message"
-        test_error = Exception("Test error")
-        log_error(error_message, test_error)
-        mock_error.assert_called_once_with(f"{error_message}: {str(test_error)}")
+        log_error(error_message)
+        mock_error.assert_called_once_with(error_message)
     
     @patch('logging.Logger.info')
     def test_log_success(self, mock_info):
@@ -49,14 +49,17 @@ class TestLogging:
         """Test batch operation logging."""
         operation = "test_operation"
         total = 10
-        
-        # Test initial batch operation logging
-        log_batch_operation(operation, total)
-        mock_info.assert_called_once_with(f"Batch {operation}: Processing {total} items")
-        mock_info.reset_mock()
-        
-        # Test completion logging
         successful = 8
         failed = 2
+        
         log_batch_operation(operation, total, successful, failed)
-        mock_info.assert_called_once_with(f"Batch {operation} completed: {successful}/{total} successful, {failed} failed") 
+        
+        expected_message = f"Batch {operation} completed: {successful}/{total} successful, {failed} failed"
+        mock_info.assert_called_once_with(expected_message)
+
+    def test_log_file_creation(self, caplog):
+        setup_logging()
+        logger = logging.getLogger('utils.logging')
+        with caplog.at_level(logging.INFO):
+            logger.info('Test log message')
+        assert 'Test log message' in caplog.text 

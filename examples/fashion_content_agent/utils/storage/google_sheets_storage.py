@@ -5,6 +5,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from utils.url_validation import convert_google_drive_url
 from datetime import datetime
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -154,10 +155,12 @@ class GoogleSheetsStorage:
                 self._spreadsheet_cache[sheet_name] = spreadsheet_id
                 logger.info(f"Created new spreadsheet with ID: {spreadsheet_id}")
                 
-                # Share the spreadsheet with the user's email
-                user_email = content.get('user_email')
+                # Share the spreadsheet with the user's email or default
+                user_email = content.get('user_email') or os.environ.get('GOOGLE_SHARE_EMAIL')
                 if user_email:
                     self._share_spreadsheet(spreadsheet_id, user_email)
+                else:
+                    logger.warning("No user email provided and GOOGLE_SHARE_EMAIL not set. Sheet will not be shared.")
                 
                 # Write headers
                 headers = [
@@ -245,12 +248,16 @@ class GoogleSheetsStorage:
                 spreadsheet_id = spreadsheet['spreadsheetId']
                 self._spreadsheet_cache[sheet_name] = spreadsheet_id
                 
-                # Share the spreadsheet with the user's email if provided in any content
+                # Share the spreadsheet with the user's email or default (only once)
+                shared = False
                 for content in contents:
-                    user_email = content.get('user_email')
-                    if user_email:
+                    user_email = content.get('user_email') or os.environ.get('GOOGLE_SHARE_EMAIL')
+                    if user_email and not shared:
                         self._share_spreadsheet(spreadsheet_id, user_email)
-                        break  # Share only once with the first found email
+                        shared = True
+                        break
+                if not shared:
+                    logger.warning("No user email provided in batch and GOOGLE_SHARE_EMAIL not set. Sheet will not be shared.")
                 
                 # Write headers
                 headers = [
