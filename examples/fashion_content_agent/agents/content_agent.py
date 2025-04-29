@@ -30,7 +30,8 @@ class ContentAgent:
               "caption": "engaging social media caption (emojis welcome but optional)",
               "hashtags": ["array of relevant and trendy fashion hashtags"],
               "alt_text": "accessible image description focused on clothing and accessories",
-              "platform": "suggested best-fit platform (e.g., Instagram, Facebook, Pinterest)"
+              "platform": "suggested best-fit platform (e.g., Instagram, Facebook, Pinterest)",
+              "key_features": ["list of 3-5 key product features, materials, or unique selling points"]
             }}
             """
             

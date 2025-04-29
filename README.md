@@ -89,6 +89,7 @@ You can run the examples in this repository by executing the scripts in the `exa
 
 | Example | Description |
 | ------- | ----------- |
+| fashion_content_agent | A Streamlit application that processes fashion images, generates marketing content using AI, and stores results in Google Sheets. |
 | autogen_basic.py | Uses AutoGen to build a single agent. |
 | autogen_tools.py | Uses AutoGen to build a single agent with tools. |
 | autogen_magenticone.py | Uses AutoGen with the MagenticOne orchestrator agent for travel planning. |
@@ -158,6 +159,158 @@ This project includes infrastructure as code (IaC) to provision Azure OpenAI dep
     ```shell
     azd down
     ```
+
+## Fashion Content Agent
+
+A Streamlit-based application that automates the generation of marketing content for fashion images using AI vision analysis and content generation.
+
+## Features
+
+- Process up to 3 fashion images simultaneously with batch processing
+- Generate comprehensive marketing content:
+  - Product titles
+  - Detailed descriptions
+  - Marketing captions
+  - SEO-friendly hashtags
+  - Accessibility-focused alt text
+- Intelligent duplicate detection to prevent redundant processing
+- Automatic Google Sheets integration with email sharing
+- Robust error handling and logging system
+- Support for various image sources (including Google Drive)
+- Comprehensive test suite for reliability
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- Git
+- Google Cloud account with Sheets API enabled
+- Google service account credentials
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone [repository-url]
+   cd fashion-content-agent
+   ```
+
+2. Set up a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Install test dependencies (optional):
+   ```bash
+   pip install -r tests/requirements-test.txt
+   ```
+
+### Configuration
+
+1. Set up environment variables:
+   ```bash
+   export GOOGLE_CREDENTIALS_FILE="path/to/credentials.json"
+   export GOOGLE_SHARE_EMAIL="default@example.com"  # Optional
+   ```
+
+2. Configure logging (optional):
+   - Default log file: `app.log`
+   - Log level: INFO
+   - Formats: Timestamp, Level, Message
+
+## Usage
+
+1. Start the application:
+   ```bash
+   streamlit run app.py
+   ```
+
+2. In the web interface:
+   - Enter up to 3 image URLs (one per line)
+   - Customize the Google Sheet name (optional)
+   - Provide your email for sheet access
+   - Click "Process Images"
+
+3. The application will:
+   - Validate all URLs
+   - Check for duplicates
+   - Process valid images
+   - Generate content
+   - Save to Google Sheets
+   - Share the sheet with your email
+
+## Testing
+
+The project includes a comprehensive test suite:
+
+```bash
+# Run all tests
+python -m pytest tests/unit/ -v
+
+# Run specific test categories
+python -m pytest tests/unit/test_batch_processing.py
+python -m pytest tests/unit/test_email_notification.py
+python -m pytest tests/unit/test_logging.py
+python -m pytest tests/unit/test_duplicate_detection.py
+```
+
+Test coverage includes:
+- Batch processing functionality
+- Email notification system
+- Logging implementation
+- Duplicate detection
+- Error handling
+- Cache management
+
+## Error Handling
+
+The application includes robust error handling for:
+- Invalid image URLs
+- Inaccessible images
+- Google Sheets API errors
+- Email sharing issues
+- Duplicate images
+- Batch processing failures
+
+## Logging
+
+Comprehensive logging system that tracks:
+- Operation progress
+- Error occurrences
+- Performance metrics
+- User interactions
+- API responses
+
+## Security
+
+- Secure credential management
+- Email validation
+- Access control for Google Sheets
+- Protected image processing
+- Secure cache management
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run the test suite
+5. Submit a pull request
+
+## License
+
+[License details]
+
+## Contact
+
+[Contact information]
 
 ## Resources
 

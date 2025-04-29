@@ -109,7 +109,7 @@ def get_image_from_url(url: str) -> str:
     except Exception as e:
         raise ValueError(f"Failed to get image from URL: {str(e)}")
 
-def is_valid_image_url(url: str) -> bool:
+def is_valid_image_url(url: str) -> tuple[bool, Optional[str]]:
     """
     Check if a URL points to a valid image.
     
@@ -117,11 +117,20 @@ def is_valid_image_url(url: str) -> bool:
         url (str): URL to check
         
     Returns:
-        bool: True if URL points to a valid image, False otherwise
+        tuple[bool, Optional[str]]: (is_valid, error_message)
+        - is_valid: True if URL points to a valid image, False otherwise
+        - error_message: None if valid, error description if invalid
     """
     try:
-        # Convert Google Drive URL if necessary
-        url = convert_google_drive_url(url)
+        # Check for Google Drive URL
+        if 'drive.google.com' in url:
+            if not ('/file/d/' in url or 'id=' in url):
+                return False, "Invalid Google Drive URL format. URL must be a direct file link."
+            try:
+                # Try to convert the URL
+                url = convert_google_drive_url(url)
+            except ValueError:
+                return False, "Invalid Google Drive URL. Please make sure the file exists and is publicly accessible."
         
         # Add headers to mimic a browser request
         headers = {
@@ -137,10 +146,24 @@ def is_valid_image_url(url: str) -> bool:
         
         # Check if content type is an image
         content_type = response.headers.get('content-type', '')
-        return content_type.startswith('image/')
+        if not content_type.startswith('image/'):
+            return False, f"URL does not point to an image. Content type: {content_type}"
         
-    except Exception:
-        return False
+        return True, None
+        
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 403:
+            if 'drive.google.com' in url:
+                return False, "This Google Drive file is not publicly accessible. Please update the sharing settings to 'Anyone with the link'."
+            return False, "Access to this file is forbidden. Please check the file permissions."
+        elif e.response.status_code == 404:
+            return False, "File not found. Please check if the URL is correct."
+        else:
+            return False, f"HTTP error occurred: {str(e)}"
+    except requests.exceptions.RequestException as e:
+        return False, f"Failed to validate URL: {str(e)}"
+    except Exception as e:
+        return False, f"Invalid image URL: {str(e)}"
 
 def convert_gdrive_url(url: str) -> str:
     """

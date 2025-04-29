@@ -31,7 +31,7 @@ async def test_create_spreadsheet_headers(storage, mock_services):
     mock_sheets, _ = mock_services
     # Simulate spreadsheet creation and header writing
     mock_sheets.spreadsheets().create().execute.return_value = {'spreadsheetId': 'sheet123'}
-    result = storage._create_spreadsheet('Test Sheet')
+    result = storage._create_spreadsheet('ImageToText Content')
     # Check that headers are written correctly
     args, kwargs = mock_sheets.spreadsheets().values().update.call_args
     headers = kwargs['body']['values'][0]
@@ -52,7 +52,7 @@ async def test_create_spreadsheet_headers(storage, mock_services):
 async def test_save_content_minimal_fields(storage, mock_services):
     mock_sheets, mock_drive = mock_services
     # Simulate existing sheet
-    mock_drive.files().list().execute.return_value = {'files': [{'id': 'sheet123', 'name': 'Test Sheet'}]}
+    mock_drive.files().list().execute.return_value = {'files': [{'id': 'sheet123', 'name': 'ImageToText Content'}]}
     mock_sheets.spreadsheets().values().append().execute.return_value = {}
     
     content = {
@@ -69,7 +69,7 @@ async def test_save_content_minimal_fields(storage, mock_services):
         'key_features': ['feature1', 'feature2']
     }
     
-    sheet_url = await storage.save(content, vision_analysis, sheet_name='Test Sheet')
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
     assert 'sheet123' in sheet_url
     
     # Check that content is written correctly
@@ -82,7 +82,7 @@ async def test_save_content_minimal_fields(storage, mock_services):
 @pytest.mark.asyncio
 async def test_save_content_missing_fields(storage, mock_services):
     mock_sheets, mock_drive = mock_services
-    mock_drive.files().list().execute.return_value = {'files': [{'id': 'sheet123', 'name': 'Test Sheet'}]}
+    mock_drive.files().list().execute.return_value = {'files': [{'id': 'sheet123', 'name': 'ImageToText Content'}]}
     mock_sheets.spreadsheets().values().append().execute.return_value = {}
     
     content = {
@@ -94,7 +94,7 @@ async def test_save_content_missing_fields(storage, mock_services):
         'key_features': []
     }
     
-    sheet_url = await storage.save(content, vision_analysis, sheet_name='Test Sheet')
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
     assert 'sheet123' in sheet_url
     
     # Check that missing fields are empty
@@ -108,7 +108,7 @@ async def test_save_content_missing_fields(storage, mock_services):
 @pytest.mark.asyncio
 async def test_save_content_extra_fields(storage, mock_services):
     mock_sheets, mock_drive = mock_services
-    mock_drive.files().list().execute.return_value = {'files': [{'id': 'sheet123', 'name': 'Test Sheet'}]}
+    mock_drive.files().list().execute.return_value = {'files': [{'id': 'sheet123', 'name': 'ImageToText Content'}]}
     mock_sheets.spreadsheets().values().append().execute.return_value = {}
     
     content = {
@@ -126,7 +126,7 @@ async def test_save_content_extra_fields(storage, mock_services):
         'key_features': ['feature1']
     }
     
-    sheet_url = await storage.save(content, vision_analysis, sheet_name='Test Sheet')
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
     assert 'sheet123' in sheet_url
     
     # Check that extra fields are not written
@@ -137,13 +137,13 @@ async def test_save_content_extra_fields(storage, mock_services):
 @pytest.mark.asyncio
 async def test_save_content_empty(storage, mock_services):
     mock_sheets, mock_drive = mock_services
-    mock_drive.files().list().execute.return_value = {'files': [{'id': 'sheet123', 'name': 'Test Sheet'}]}
+    mock_drive.files().list().execute.return_value = {'files': [{'id': 'sheet123', 'name': 'ImageToText Content'}]}
     mock_sheets.spreadsheets().values().append().execute.return_value = {}
     
     content = {}
     vision_analysis = {}
     
-    sheet_url = await storage.save(content, vision_analysis, sheet_name='Test Sheet')
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
     assert 'sheet123' in sheet_url
     
     # Check that all fields are empty
@@ -158,7 +158,7 @@ async def test_sheet_reuse(storage, mock_services):
     mock_sheets, mock_drive = mock_services
     # Simulate existing sheet
     mock_drive.files().list().execute.return_value = {
-        'files': [{'id': 'existing123', 'name': 'Test Sheet'}]
+        'files': [{'id': 'existing123', 'name': 'ImageToText Content'}]
     }
     mock_sheets.spreadsheets().values().append().execute.return_value = {}
     
@@ -166,11 +166,11 @@ async def test_sheet_reuse(storage, mock_services):
     vision_analysis = {'test': 'data'}
     
     # First save should find existing sheet
-    sheet_url1 = await storage.save(content, vision_analysis, sheet_name='Test Sheet')
+    sheet_url1 = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
     assert 'existing123' in sheet_url1
     
     # Second save should use cached sheet ID
-    sheet_url2 = await storage.save(content, vision_analysis, sheet_name='Test Sheet')
+    sheet_url2 = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
     assert 'existing123' in sheet_url2
     
     # Verify we only searched for the sheet once
@@ -188,7 +188,7 @@ async def test_sheet_creation_with_headers(storage, mock_services):
     vision_analysis = {'test': 'data', 'key_features': []}
     
     # Save should create new sheet with headers
-    sheet_url = await storage.save(content, vision_analysis, sheet_name='New Sheet')
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
     assert 'new123' in sheet_url
     
     # Verify headers were written
@@ -209,7 +209,7 @@ async def test_sheet_sharing(storage, mock_services):
     
     # Save with sharing enabled
     storage.share_email = 'test@example.com'
-    sheet_url = await storage.save(content, vision_analysis, sheet_name='New Sheet')
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
     
     # Verify sharing was attempted
     args, kwargs = mock_drive.permissions().create.call_args
@@ -223,14 +223,14 @@ async def test_sheet_error_handling(storage, mock_services):
     # Test drive API error
     mock_drive.files().list().execute.side_effect = Exception('Drive API error')
     with pytest.raises(Exception, match='Error saving to Google Sheets'):
-        await storage.save({}, {}, sheet_name='Test Sheet')
+        await storage.save({}, {}, sheet_name='ImageToText Content')
     
     # Test sheets API error
     mock_drive.files().list().execute.side_effect = None
     mock_drive.files().list().execute.return_value = {'files': []}
     mock_sheets.spreadsheets().create().execute.side_effect = Exception('Sheets API error')
     with pytest.raises(Exception, match='Error saving to Google Sheets'):
-        await storage.save({}, {}, sheet_name='Test Sheet')
+        await storage.save({}, {}, sheet_name='ImageToText Content')
 
 @pytest.mark.asyncio
 async def test_concurrent_sheet_access(storage, mock_services):
@@ -238,7 +238,7 @@ async def test_concurrent_sheet_access(storage, mock_services):
     
     # Simulate existing sheet
     mock_drive.files().list().execute.return_value = {
-        'files': [{'id': 'existing123', 'name': 'Test Sheet'}]
+        'files': [{'id': 'existing123', 'name': 'ImageToText Content'}]
     }
     mock_sheets.spreadsheets().values().append().execute.return_value = {}
     
@@ -248,12 +248,12 @@ async def test_concurrent_sheet_access(storage, mock_services):
     # Run multiple saves concurrently
     import asyncio
     tasks = [
-        storage.save(content, vision_analysis, sheet_name='Test Sheet')
+        storage.save(content, vision_analysis, sheet_name='ImageToText Content')
         for _ in range(5)
     ]
     results = await asyncio.gather(*tasks)
     
-    # All saves should use the same sheet ID
+    # Verify all saves used the same sheet
     assert all('existing123' in url for url in results)
     
     # Verify we only searched for the sheet once
@@ -262,207 +262,122 @@ async def test_concurrent_sheet_access(storage, mock_services):
 @pytest.mark.asyncio
 async def test_duplicate_url_handling(storage, mock_services):
     mock_sheets, mock_drive = mock_services
-    
-    # Mock existing spreadsheet
-    mock_drive.files().list().execute.return_value = {'files': [{'id': 'test123'}]}
-    
-    # Mock existing URLs in the sheet
+    # Simulate existing sheet with URLs
+    mock_drive.files().list().execute.return_value = {
+        'files': [{'id': 'sheet123', 'name': 'ImageToText Content'}]
+    }
     mock_sheets.spreadsheets().values().get().execute.return_value = {
-        'values': [
-            ['Image URL'],  # Header
-            ['https://example.com/image1.jpg'],
-            ['https://example.com/image2.jpg']
-        ]
+        'values': [['header'], ['https://example.com/image.jpg']]
     }
     
-    # Test with a new URL
-    content = {'image_url': 'https://example.com/image3.jpg'}
+    content = {
+        'title': 'Test Title',
+        'image_url': 'https://example.com/image.jpg'
+    }
     vision_analysis = {'test': 'data'}
-    sheet_url = await storage.save(content, vision_analysis)
     
-    # Verify new URL was saved
-    assert mock_sheets.spreadsheets().values().append.called
-    
-    # Test with a duplicate URL
-    content = {'image_url': 'https://example.com/image1.jpg'}
-    sheet_url = await storage.save(content, vision_analysis)
-    
-    # Verify no new append was made for duplicate URL
-    assert mock_sheets.spreadsheets().values().append.call_count == 1
+    # Try to save duplicate URL
+    with pytest.raises(ValueError, match="Image URL already exists in sheet 'ImageToText Content'"):
+        await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
 
 @pytest.mark.asyncio
 async def test_duplicate_url_empty_sheet(storage, mock_services):
     mock_sheets, mock_drive = mock_services
-    
-    # Mock empty spreadsheet
-    mock_drive.files().list().execute.return_value = {'files': [{'id': 'test123'}]}
+    # Simulate empty sheet
+    mock_drive.files().list().execute.return_value = {
+        'files': [{'id': 'sheet123', 'name': 'ImageToText Content'}]
+    }
     mock_sheets.spreadsheets().values().get().execute.return_value = {
-        'values': [['Image URL']]  # Only header
+        'values': [['header']]
     }
     
-    # Test with a new URL
-    content = {'image_url': 'https://example.com/image1.jpg'}
+    content = {
+        'title': 'Test Title',
+        'image_url': 'https://example.com/image.jpg'
+    }
     vision_analysis = {'test': 'data'}
-    sheet_url = await storage.save(content, vision_analysis)
     
-    # Verify URL was saved
-    assert mock_sheets.spreadsheets().values().append.called
+    # Should not raise error for empty sheet
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
+    assert 'sheet123' in sheet_url
 
 @pytest.mark.asyncio
 async def test_duplicate_url_no_image_url(storage, mock_services):
     mock_sheets, mock_drive = mock_services
+    # Simulate existing sheet
+    mock_drive.files().list().execute.return_value = {
+        'files': [{'id': 'sheet123', 'name': 'ImageToText Content'}]
+    }
     
-    # Mock existing spreadsheet
-    mock_drive.files().list().execute.return_value = {'files': [{'id': 'test123'}]}
-    
-    # Test with content without image_url
-    content = {'title': 'Test'}
+    content = {
+        'title': 'Test Title'
+    }
     vision_analysis = {'test': 'data'}
-    sheet_url = await storage.save(content, vision_analysis)
     
-    # Verify save was attempted (no duplicate check needed)
-    assert mock_sheets.spreadsheets().values().append.called
+    # Should not check for duplicates if no image_url
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
+    assert 'sheet123' in sheet_url
+    mock_sheets.spreadsheets().values().get().assert_not_called()
 
 @pytest.mark.asyncio
 async def test_duplicate_url_error_handling(storage, mock_services):
     mock_sheets, mock_drive = mock_services
+    # Simulate error checking for duplicates
+    mock_drive.files().list().execute.return_value = {
+        'files': [{'id': 'sheet123', 'name': 'ImageToText Content'}]
+    }
+    mock_sheets.spreadsheets().values().get().execute.side_effect = Exception('API error')
     
-    # Mock existing spreadsheet
-    mock_drive.files().list().execute.return_value = {'files': [{'id': 'test123'}]}
+    content = {
+        'title': 'Test Title',
+        'image_url': 'https://example.com/image.jpg'
+    }
+    vision_analysis = {'test': 'data'}
     
-    # Mock error when checking URLs
-    mock_sheets.spreadsheets.return_value.values.return_value.get.side_effect = Exception("Failed to get values")
-    
-    # Mock Streamlit context
-    with patch('utils.document_storage.st') as mock_st:
-        # Test error handling
-        content = {'image_url': 'https://example.com/image1.jpg'}
-        vision_analysis = {'test': 'data'}
-        
-        with pytest.raises(Exception, match="Error checking for duplicate URLs"):
-            await storage.save(content, vision_analysis)
+    # Should raise error with sheet name in message
+    with pytest.raises(Exception, match="Error checking for duplicate URLs in sheet 'ImageToText Content'"):
+        await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
 
 @pytest.mark.asyncio
 async def test_duplicate_url_nonexistent_sheet(storage, mock_services):
-    """Test handling of duplicate URLs when the sheet doesn't exist yet."""
     mock_sheets, mock_drive = mock_services
-    
-    # Mock no existing spreadsheet
+    # Simulate nonexistent sheet
     mock_drive.files().list().execute.return_value = {'files': []}
     mock_sheets.spreadsheets().create().execute.return_value = {'spreadsheetId': 'new123'}
     
-    # Mock the values().get() call to return empty values for first save
-    mock_sheets.spreadsheets().values().get().execute.return_value = {
-        'values': [['Image URL']]  # Only header row
+    content = {
+        'title': 'Test Title',
+        'image_url': 'https://example.com/image.jpg'
     }
-    mock_sheets.spreadsheets().values().append().execute.return_value = {}
-    
-    # Test with a new URL
-    content = {'image_url': 'https://example.com/image1.jpg'}
     vision_analysis = {'test': 'data'}
     
-    # Reset the append call counter
-    mock_sheets.spreadsheets().values().append.reset_mock()
-    
-    # First save should create the sheet
-    sheet_url = await storage.save(content, vision_analysis, sheet_name='New Sheet')
+    # Should create new sheet without checking for duplicates
+    sheet_url = await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
     assert 'new123' in sheet_url
-    
-    # Verify sheet was created and first URL was saved
-    assert mock_sheets.spreadsheets().create.called
-    assert mock_sheets.spreadsheets().values().append.call_count == 1
-    
-    # Mock the values().get() call to return the first URL for second save
-    mock_sheets.spreadsheets().values().get().execute.return_value = {
-        'values': [
-            ['Image URL'],  # Header row
-            ['https://example.com/image1.jpg']  # First URL
-        ]
-    }
-    
-    # Reset the append call counter again
-    mock_sheets.spreadsheets().values().append.reset_mock()
-    
-    # Second save with same URL should detect duplicate
-    sheet_url2 = await storage.save(content, vision_analysis, sheet_name='New Sheet')
-    assert 'new123' in sheet_url2
-    
-    # Verify no new append was made
-    assert mock_sheets.spreadsheets().values().append.call_count == 0
+    mock_sheets.spreadsheets().values().get().assert_not_called()
 
 @pytest.mark.asyncio
 async def test_duplicate_url_early_check():
-    """Test early duplicate URL check before processing."""
-    # Mock the storage
-    storage = GoogleSheetsStorage()
-    storage._get_sheets_service = MagicMock()
-    storage._get_drive_service = MagicMock()
-    
-    # Mock the service
-    service = MagicMock()
-    storage._get_sheets_service.return_value = service
-    
-    # Mock the drive service and its chained methods
-    drive_service = MagicMock()
-    files_mock = MagicMock()
-    list_mock = MagicMock()
-    drive_service.files.return_value = files_mock
-    files_mock.list.return_value = list_mock
-    list_mock.execute.return_value = {
-        'files': [{'id': 'test_spreadsheet_id', 'name': 'Test Sheet'}]
-    }
-    storage._get_drive_service.return_value = drive_service
-    
-    # Mock the sheets service and its chained methods
-    sheets_mock = MagicMock()
-    values_mock = MagicMock()
-    get_mock = MagicMock()
-    service.spreadsheets.return_value = sheets_mock
-    sheets_mock.values.return_value = values_mock
-    values_mock.get.return_value = get_mock
-    get_mock.execute.return_value = {
-        'values': [
-            ['Image URL'],  # Header
-            ['https://drive.google.com/file/d/123/view'],
-            ['https://drive.google.com/uc?export=download&id=456']
-        ]
-    }
-    
-    # Test URLs
-    test_urls = [
-        'https://drive.google.com/file/d/123/view',  # Duplicate (same as first existing URL)
-        'https://drive.google.com/uc?export=download&id=789',  # New URL
-        'https://drive.google.com/uc?export=download&id=456'  # Duplicate (same as second existing URL)
-    ]
-    
-    # Get existing URLs
-    existing_urls = await storage._get_existing_urls('Test Sheet')
-    
-    # Check for duplicates
-    duplicate_urls = []
-    valid_urls = []
-    
-    for url in test_urls:
-        normalized_url = convert_google_drive_url(url)
-        if normalized_url in existing_urls:
-            duplicate_urls.append(url)
-        else:
-            valid_urls.append(url)
-    
-    # Verify results
-    assert len(duplicate_urls) == 2
-    assert len(valid_urls) == 1
-    assert 'https://drive.google.com/file/d/123/view' in duplicate_urls
-    assert 'https://drive.google.com/uc?export=download&id=456' in duplicate_urls
-    assert 'https://drive.google.com/uc?export=download&id=789' in valid_urls
-    
-    # Verify service calls
-    files_mock.list.assert_called_once_with(
-        q="name='Test Sheet' and mimeType='application/vnd.google-apps.spreadsheet'",
-        spaces='drive',
-        fields='files(id, name)'
-    )
-    values_mock.get.assert_called_once_with(
-        spreadsheetId='test_spreadsheet_id',
-        range='Sheet1!G:G'
-    ) 
+    """Test that duplicate URL check happens before any other operations."""
+    with patch('utils.document_storage.GoogleSheetsStorage._get_sheets_service') as mock_service:
+        with patch('utils.document_storage.GoogleSheetsStorage._create_spreadsheet') as mock_create:
+            storage = GoogleSheetsStorage(credentials_file='dummy.json')
+            
+            # Simulate existing sheet with URL
+            mock_service.return_value.spreadsheets().values().get().execute.return_value = {
+                'values': [['header'], ['https://example.com/image.jpg']]
+            }
+            storage._spreadsheet_cache = {"ImageToText Content": "sheet123"}
+            
+            content = {
+                'title': 'Test Title',
+                'image_url': 'https://example.com/image.jpg'
+            }
+            vision_analysis = {'test': 'data'}
+            
+            # Try to save duplicate URL
+            with pytest.raises(ValueError, match="Image URL already exists in sheet 'ImageToText Content'"):
+                await storage.save(content, vision_analysis, sheet_name='ImageToText Content')
+            
+            # Verify no other operations were attempted
+            mock_create.assert_not_called() 

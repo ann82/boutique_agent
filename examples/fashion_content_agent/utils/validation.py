@@ -32,26 +32,31 @@ def validate_image_url(url: str) -> None:
     if not is_valid_image_url(url):
         raise ImageValidationError(f"Invalid image URL: {url}")
 
-def validate_content_format(content: Dict[str, Any]) -> None:
+def validate_content_format(content: Dict[str, Any]) -> bool:
     """
     Validate the content format.
     
     Args:
         content (Dict[str, Any]): Content to validate
         
-    Raises:
-        ContentValidationError: If content format is invalid
+    Returns:
+        bool: True if content format is valid, False otherwise
     """
     required_fields = {
         "title": str,
         "description": str,
         "caption": str,
         "hashtags": list,
-        "alt_text": str
+        "alt_text": str,
+        "platform": str
     }
     
-    for field, field_type in required_fields.items():
-        if field not in content:
-            raise ContentValidationError(f"Missing required field: {field}")
-        if not isinstance(content[field], field_type):
-            raise ContentValidationError(f"Invalid type for {field}: expected {field_type}, got {type(content[field])}") 
+    try:
+        for field, field_type in required_fields.items():
+            if field not in content:
+                return False
+            if not isinstance(content[field], field_type):
+                return False
+        return True
+    except Exception:
+        return False 

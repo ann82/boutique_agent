@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from utils.api_client import APIClient
 from utils.rate_limiter import RateLimiter
 from utils.cache import CacheManager
-from utils.document_storage import GoogleSheetsStorage
+from utils.storage.google_sheets_storage import GoogleSheetsStorage
 from agents.vision_agent import VisionAgent
 from agents.content_agent import ContentAgent
 from config import Config
@@ -52,11 +52,9 @@ class SessionManager:
                 expiration_hours=Config.CACHE_TTL // 3600  # Convert seconds to hours
             )
             
-            # Initialize storage with batch processing
+            # Initialize storage
             self.storage = GoogleSheetsStorage(
-                credentials_file=Config.GOOGLE_CREDENTIALS_FILE,
-                share_email=Config.GOOGLE_SHARE_EMAIL,
-                batch_size=Config.GOOGLE_SHEETS_BATCH_SIZE
+                credentials_path=Config.GOOGLE_CREDENTIALS_FILE
             )
             
             # Initialize agents

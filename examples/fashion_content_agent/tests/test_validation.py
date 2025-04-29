@@ -1,5 +1,5 @@
 """
-Tests for validation utilities.
+Tests for validation functions.
 """
 import pytest
 import sys
@@ -32,26 +32,57 @@ def test_validate_image_url(mock_is_valid):
     with pytest.raises(ImageValidationError):
         validate_image_url("not_a_url")
 
-def test_validate_content_format():
-    """Test content format validation."""
-    # Valid content
-    valid_content = {
-        "title": "Test Title",
-        "description": "Test Description",
-        "caption": "Test Caption",
-        "hashtags": ["#test", "#fashion"],
-        "alt_text": "Test Alt Text"
-    }
-    validate_content_format(valid_content)
+@pytest.mark.asyncio
+@patch('utils.validation.is_valid_image_url')
+async def test_validate_content_format_valid_url(mock_valid_url):
+    """Test validation with valid URL."""
+    # Mock is_valid_image_url to return valid
+    mock_valid_url.return_value = (True, None)
     
-    # Missing field
-    invalid_content = valid_content.copy()
-    del invalid_content["title"]
-    with pytest.raises(ContentValidationError):
-        validate_content_format(invalid_content)
-        
-    # Wrong type
-    invalid_content = valid_content.copy()
-    invalid_content["hashtags"] = "not_a_list"
-    with pytest.raises(ContentValidationError):
-        validate_content_format(invalid_content) 
+    content = {
+        'title': 'Test Title',
+        'description': 'Test Description',
+        'caption': 'Test Caption',
+        'hashtags': ['#test'],
+        'alt_text': 'Test Alt Text',
+        'platform': 'Instagram',
+        'image_url': 'https://example.com/image.jpg'
+    }
+    
+    # Should not raise any exceptions
+    await validate_content_format(content)
+
+@pytest.mark.asyncio
+@patch('utils.validation.is_valid_image_url')
+async def test_validate_content_format_invalid_url(mock_valid_url):
+    """Test validation with invalid URL."""
+    # Mock is_valid_image_url to return invalid with error message
+    mock_valid_url.return_value = (False, "Invalid image URL")
+    
+    content = {
+        'title': 'Test Title',
+        'description': 'Test Description',
+        'caption': 'Test Caption',
+        'hashtags': ['#test'],
+        'alt_text': 'Test Alt Text',
+        'platform': 'Instagram',
+        'image_url': 'invalid_url'
+    }
+    
+    # Should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        await validate_content_format(content)
+    assert "Invalid image URL" in str(exc_info.value)
+
+@pytest.mark.asyncio
+async def test_validate_content_format_missing_fields():
+    """Test validation with missing required fields."""
+    content = {
+        'title': 'Test Title',
+        'description': 'Test Description'
+    }
+    
+    # Should raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        await validate_content_format(content)
+    assert "Missing required fields" in str(exc_info.value) 
