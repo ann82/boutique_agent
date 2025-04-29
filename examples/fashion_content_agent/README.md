@@ -1,26 +1,114 @@
 # Fashion Content Agent
 
-An AI-powered system for analyzing fashion images and generating marketing content. The system uses GPT-4o for both image analysis and content generation, with optimized API handling and async processing.
+> Project: Fashion Content Agent, Python (Streamlit UI + OpenAI Vision/Content Integration)
+
+![Image](https://github.com/user-attachments/assets/dd1da762-5dd1-48b7-a7a8-9d55891e7559)
+
+## Overview
+
+The Fashion Content Agent is an AI-powered application that automates the process of analyzing fashion images and generating boutique-quality product descriptions and marketing content.  
+Designed especially for boutique stores offering Indian and Western styles, the agent leverages GPT-4o models to analyze uploaded images, infer style, materials, and key features, and produce ready-to-publish catalog metadata and social media content.
+
+Built with Python, Streamlit, and OpenAI Vision APIs, this system helps boutiques scale their catalog creation and marketing operations quickly, efficiently, and responsibly.
+
+---
+
+## Key Features
+
+-  **Vision Analysis**: Extract style, color, material, season, and key features from fashion images using GPT-4o model.
+- **Marketing Content Generation**: Automatically generate boutique-style product titles, descriptions, captions, hashtags, and alt text.
+- **Structured JSON Outputs**: Organize all extracted metadata and marketing content for easy catalog integration.
+- **Google Sheets Integration**: Save generated outputs directly into a Google Sheet for management and publishing.
+- **Performance Optimization**: Async processing, connection pooling, batching, and caching for efficient API usage.
+- **Responsible AI Practices**: Clear user control, data privacy, and transparent processing.
+
+---
 
 ## Architecture Diagram
 
-```mermaid
-graph TD
-    A[User (Streamlit Web UI)] -->|Image URL, Sheet Selection| B(FashionContentAgent)
-    B --> C[VisionAgent (GPT-4o)]
-    B --> D[ContentAgent (GPT-4o)]
-    B --> E[GoogleSheetsStorage]
-    E -->|Store/Read| F[(Google Sheets)]
-    C -->|Vision Analysis| B
-    D -->|Generated Content| B
-    B -->|Results, Sheet Link| A
-```
+<img width="1251" alt="Image" src="https://github.com/user-attachments/assets/a0697df4-718a-41fc-8c81-635432ac2da7" />
 
-- **User** interacts with the Streamlit UI, providing an image URL and selecting/creating a Google Sheet.
-- **FashionContentAgent** orchestrates the workflow: calls the VisionAgent, then the ContentAgent, and manages storage.
-- **VisionAgent** uses GPT-4o to analyze the image.
-- **ContentAgent** uses GPT-4o to generate marketing content based on the vision analysis.
-- **GoogleSheetsStorage** saves results to the selected Google Sheet.
+High-level architecture of the Fashion Content Generation Agent System. The system uses GPT-4o model for content and vision analysis, supported by a local file-based cache and persistent storage in Google Sheets. Responsible AI and workflow optimization modules ensure secure, efficient, and transparent processing.
+
+## How It Works
+1. User uploads one or more fashion images or provides image URLs via the Streamlit UI.
+2. The agent analyzes each image using the VisionAgent (GPT-4o).
+3. Based on the vision output, the ContentAgent generates product marketing content.
+4. Outputs are structured into JSON format and saved into a Google Sheet.
+5. Caching and optimization modules improve speed and prevent duplicate processing.
+
+## Responsible AI module ensures monitoring, transparency, and secure logging.
+_Technologies Used_
+            • Python 3.10+
+            • Streamlit (for the UI)
+            • OpenAI GPT-4o API (for vision analysis and content generation)
+            • Google Sheets API (for storage)
+            • Local File-based Cache (for caching outputs)
+            • Mermaid.js (for architecture diagrams)
+
+## Responsible AI and Data Privacy
+
+User data (image URLs and generated content) is only stored in user-selected Google Sheets.
+No personal or private data is collected beyond what is needed for content generation.
+Clear indicators and permissions for data usage.
+Monitoring module captures logs and operations transparently.
+
+## Setup Instructions
+1. Clone the repository:
+   ```bash
+   git clone [repository-url]
+   cd fashion-content-agent
+   ```
+
+2. Set up a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Install test dependencies (optional):
+   ```bash
+   pip install -r tests/requirements-test.txt
+   ```
+
+5. Set environment variables Create a .env file with:
+   ```bash
+      OPENAI_API_KEY=your_openai_key
+      GOOGLE_CREDENTIALS_FILE=path/to/google-credentials.json
+      GOOGLE_SHARE_EMAIL=your-google-account@email.com
+   ```
+
+6. Run the Streamlit application:
+   ```bash
+   streamlit run app.py
+   ```
+
+## Example Outputs
+{
+  "Title": "Blossom Dreams Indo-Western Dress",
+  "Description": "Celebrate the season in a breezy Indo-western fusion crafted from lightweight georgette and hand-embroidered silk panels. A rose pink base blooms with emerald accents, perfect for spring festivities.",
+  "Caption": "Spring into style 🌸✨ Meet our 'Blossom Dreams' dress — tradition with a modern twist! #BoutiqueFashion",
+  "Hashtags": ["#IndoWestern", "#SpringStyle", "#BoutiqueFashion"],
+  "Alt_text": "Rose pink Indo-western dress with emerald floral embroidery",
+  "Platform": "Instagram",
+  "Image URL":"https://drive.google.com/file/d/ldshfsjdfjsdbfjsdhfshdflshdlf/view?usp=sharing,
+  "Key Features":"'floral embroidery', 'sheer full sleeves', 'statement choker and earrings'",
+   "Generated At": "2025-04-28 17:35:59",
+   "Vision Analysis": "{'style': '', 'colors': [], 'materials': ['], 'occasion': 'festive', 'season': 'festive season', 'key_features': [], 
+    'brand_style': ''}"
+}
+
+## Future Work
+Direct integration with Shopify for automated product listing
+Multi-language marketing content generation
+Accessory recommendation system based on outfit analysis
+Instagram/Facebook auto-scheduling support
+Expansion to use Azure Blob Storage / S3 for media persistence
 
 ## Recent Optimizations
 
@@ -210,7 +298,7 @@ The test suite is organized into several key areas:
 
 ### 1. **Run the Application**:
 ```bash
-streamlit run main.py
+streamlit run app.py
 ```
 
 ### 2. **Sheet Selection and Creation**
